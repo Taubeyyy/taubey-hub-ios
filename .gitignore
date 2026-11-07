@@ -1,0 +1,6 @@
+ios/build/
+ios/out/
+ios/*.xcodeproj/
+ios/Taubey/Info.plist
+.DS_Store
+__pycache__/

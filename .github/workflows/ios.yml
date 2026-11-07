@@ -1,0 +1,80 @@
+# Builds the iOS app on a Mac runner and publishes a TrollStore-ready .ipa as
+# a GitHub release (tag build-<number>). Signed only with ldid and the
+# entitlements - TrollStore does the rest when installing.
+name: iOS build
+
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build number
+        run: echo "BUILD=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      - name: Tools
+        run: brew install xcodegen ldid
+
+      # Before Xcode: everything that can be checked without a screen fails
+      # here, before ten minutes of build time are spent - above all reading
+      # the server's answers.
+      - name: Logic tests
+        run: |
+          set -o pipefail
+          swiftc -O Shared/*.swift Tests/*.swift -o /tmp/logic 2>&1 | tee "$RUNNER_TEMP/build.log"
+          /tmp/logic 2>&1 | tee -a "$RUNNER_TEMP/build.log"
+
+      - name: Generate the Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project Taubey.xcodeproj -scheme Taubey \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=0.1.${{ env.BUILD }} \
+            CURRENT_PROJECT_VERSION=${{ env.BUILD }} \
+            build 2>&1 | tee -a "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*Taubey|BUILD" || true
+          test -d build/Build/Products/Release-iphoneos/Taubey.app
+
+      - name: Sign with ldid and pack the IPA
+        run: |
+          APP=build/Build/Products/Release-iphoneos/Taubey.app
+          ldid -STaubey/Taubey.entitlements -Icom.taubey.hub "$APP/Taubey"
+          ldid -e "$APP/Taubey"
+          mkdir -p out/Payload
+          cp -R "$APP" out/Payload/
+          (cd out && zip -qry Taubey.ipa Payload)
+          ls -lh out/Taubey.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Taubey-${{ env.BUILD }}
+          path: ios/out/Taubey.ipa
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ env.BUILD }}" out/Taubey.ipa \
+            --title "Taubey Build ${{ env.BUILD }}" \
+            --notes "Commit ${GITHUB_SHA::7}: $(git log -1 --pretty=%s)"
+
+      - name: Errors at a glance
+        if: failure()
+        run: grep -E "error:|✗ FAIL" "$RUNNER_TEMP/build.log" | head -80 || true
