@@ -23,7 +23,7 @@ struct InstancesView: View {
                     Section {
                         ForEach(agents.filter { $0.game == game }.sorted(by: order)) { agent in
                             NavigationLink(value: agent) { AgentRow(agent: agent) }
-                                .listRowBackground(Theme.surface)
+                                .rowSurface()
                                 .swipeActions(edge: .trailing) {
                                     Button { Task { await store.command("hop", agents: [agent.id]) } } label: {
                                         Label("Server", systemImage: "arrow.left.arrow.right")
@@ -177,10 +177,10 @@ struct InstanceDetailView: View {
                 }
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                Tile(caption: "Cash / s", value: Format.number(agent.metric("cashPerSec")))
-                Tile(caption: "Fänge / min", value: Format.number(agent.metric("catchesPerMin")))
-                Tile(caption: "Cash", value: Format.number(agent.metric("cash")))
-                Tile(caption: "Rebirths", value: Format.number(agent.metric("rebirths")))
+                Tile(caption: "Cash / s", value: Format.number(agent.metric("cashPerSec")), icon: "dollarsign.circle")
+                Tile(caption: "Fänge / min", value: Format.number(agent.metric("catchesPerMin")), icon: "fish")
+                Tile(caption: "Cash", value: Format.number(agent.metric("cash")), icon: "banknote")
+                Tile(caption: "Rebirths", value: Format.number(agent.metric("rebirths")), icon: "arrow.triangle.2.circlepath")
             }
         }
     }
@@ -213,10 +213,9 @@ struct InstanceDetailView: View {
             }
             .foregroundColor(tint)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Theme.surface)
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.outline, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .padding(.vertical, 13)
+            .background(tint.opacity(0.07))
+            .cardSurface()
         }
         .buttonStyle(.plain)
     }

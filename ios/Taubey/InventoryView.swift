@@ -22,7 +22,7 @@ struct InventoryView: View {
                     } else {
                         Section {
                             ForEach(items) { item in
-                                ItemRow(item: item, game: game).listRowBackground(Theme.surface)
+                                ItemRow(item: item, game: game).rowSurface()
                             }
                         } header: {
                             Text("\(items.count) Sorten · \(Format.number(Double(items.reduce(0) { $0 + $1.count }))) Stück")
@@ -77,7 +77,7 @@ struct InventoryView: View {
                 Text("Name").tag("name")
             }
         }
-        .listRowBackground(Theme.surface)
+        .rowSurface()
     }
 
     private func shown(_ inv: Inventory) -> [Item] {

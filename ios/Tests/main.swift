@@ -103,5 +103,27 @@ check(back == body, "encode round trip")
 check(JSONValue.string("3").int == 3, "int from text")
 check(JSONValue.number(100000000000000001).string != nil, "big id as text")
 
+// MARK: notifications
+func ev(_ kind: String, _ at: Double, _ title: String = "t", _ detail: String = "") -> HubEvent {
+    HubEvent(.object(["kind": .string(kind), "at": .number(at), "title": .string(title), "detail": .string(detail),
+                      "account": .string("Taubeyyyy"), "game": .string("Fish an Anime RNG")]))!
+}
+let evs = (0..<10).map { ev($0 % 2 == 0 ? "catch" : "server", 1000 + Double($0)) } + [ev("trouble", 2000)]
+let since = Date(timeIntervalSince1970: 1003)
+let picked = AlertLogic.fresh(evs, since: since, kinds: ["catch", "trouble"], limit: 5)
+check(picked.count == 4, "catch 1004,1006,1008 + trouble got \(picked.count)")
+check(picked.first?.at == Date(timeIntervalSince1970: 1004) && picked.last?.kind == "trouble", "oldest first")
+check(AlertLogic.fresh(evs, since: Date(timeIntervalSince1970: 0), kinds: ["catch"], limit: 2).count == 2, "limit")
+check(AlertLogic.fresh(evs, since: since, kinds: []).isEmpty, "nothing wanted")
+check(AlertLogic.newest(evs, after: since) == Date(timeIntervalSince1970: 2000), "newest")
+check(AlertLogic.newest([], after: since) == since, "newest of none")
+let catchText = AlertLogic.text(for: ev("catch", 1, "Rubie Hoshi [Electric]", "Divine"))
+check(catchText.title.contains("Divine: Rubie Hoshi"), "catch title got \(catchText.title)")
+check(catchText.body == "Taubeyyyy · Fish an Anime RNG", "catch body")
+let agentsNow = ov.agents
+check(AlertLogic.onlineIds(agentsNow) == ["100000000000000001|taubeyyyy|fish an anime rng"], "online ids")
+check(AlertLogic.wentOffline(previous: ["729|alt|adopt me!"], agents: agentsNow).map { $0.account } == ["Alt"], "went offline")
+check(AlertLogic.wentOffline(previous: [], agents: agentsNow).isEmpty, "nothing was online")
+
 print("\(passed) passed, \(failures) failed")
 if failures > 0 { exit(1) }

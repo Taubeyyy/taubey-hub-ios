@@ -78,7 +78,7 @@ struct SettingsEditor: View {
                                        changed: changes[item.key] != nil) { newValue in
                                 changes[item.key] = newValue
                             }
-                            .listRowBackground(Theme.surface)
+                            .rowSurface()
                         }
                     } header: {
                         Text(search.isEmpty ? section.group : "\(section.tab) · \(section.group)").foregroundColor(Theme.muted)
@@ -108,11 +108,7 @@ struct SettingsEditor: View {
 
     private var sendBar: some View {
         VStack(spacing: 10) {
-            Picker("", selection: $asDefault) {
-                Text("Nur diese Instanz").tag(false)
-                Text("Standard für \(agent.game)").tag(true)
-            }
-            .pickerStyle(.segmented)
+            SegPicker(selection: $asDefault, options: [(false, "Nur diese Instanz"), (true, "Standard fürs Spiel")])
             HStack(spacing: 10) {
                 Button("Verwerfen") { changes = [:] }
                     .foregroundColor(Theme.muted)
@@ -315,7 +311,7 @@ struct MultiPicker: View {
                             if chosen.contains(value) { Image(systemName: "checkmark").foregroundColor(Theme.accent) }
                         }
                     }
-                    .listRowBackground(Theme.surface)
+                    .rowSurface()
                 }
             } footer: {
                 Text("\(chosen.count) von \(item.values.count) gewählt").foregroundColor(Theme.muted)

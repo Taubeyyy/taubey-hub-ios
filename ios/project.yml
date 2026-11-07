@@ -31,6 +31,9 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UIUserInterfaceStyle: Dark
+        # background refresh: iOS wakes the app now and then to look for news
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.taubey.hub.refresh]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.taubey.hub

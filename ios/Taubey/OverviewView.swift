@@ -7,7 +7,7 @@ struct OverviewView: View {
     @State private var hours = 6
     @State private var points: [HistoryPoint] = []
 
-    private let ranges = [("session", "Session"), ("today", "Heute"), ("7d", "7 Tage"), ("all", "Alles")]
+    private let ranges: [(String, String)] = [("session", "Session"), ("today", "Heute"), ("7d", "7 Tage"), ("all", "Alles")]
 
     var body: some View {
         NavigationStack {
@@ -53,12 +53,17 @@ struct OverviewView: View {
 
     private func tiles(_ o: Overview) -> some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-            Tile(caption: "Online", value: "\(o.online) / \(o.total)", tint: o.online > 0 ? Theme.good : Theme.muted)
-            Tile(caption: "Cash / s", value: Format.number(o.cashPerSec))
-            Tile(caption: "Fänge / min", value: Format.number(o.catchesPerMin))
-            Tile(caption: "Gems / min", value: Format.number(o.gemsPerMin))
-            Tile(caption: "Cash gesamt", value: Format.number(o.cash))
-            Tile(caption: "Rebirths", value: Format.number(o.rebirths))
+            Tile(caption: "Online", value: "\(o.online) / \(o.total)", icon: "dot.radiowaves.left.and.right",
+                 sub: o.online == o.total ? "alle laufen" : "\(o.total - o.online) offline",
+                 tint: o.online > 0 ? Theme.good : Theme.muted)
+            Tile(caption: "Cash / s", value: Format.number(o.cashPerSec), icon: "dollarsign.circle",
+                 sub: Format.number(o.cashPerSec * 3600) + " pro Stunde")
+            Tile(caption: "Fänge / min", value: Format.number(o.catchesPerMin), icon: "fish",
+                 sub: Format.number(o.catches) + " diese Session")
+            Tile(caption: "Gems / min", value: Format.number(o.gemsPerMin), icon: "diamond",
+                 sub: Format.number(o.gems) + " gesamt")
+            Tile(caption: "Cash", value: Format.number(o.cash), icon: "banknote")
+            Tile(caption: "Rebirths", value: Format.number(o.rebirths), icon: "arrow.triangle.2.circlepath")
         }
     }
 
@@ -88,12 +93,7 @@ struct OverviewView: View {
 
     private var chart: some View {
         Card(title: "Verlauf", icon: "chart.xyaxis.line") {
-            Picker("", selection: $metric) {
-                Text("Cash").tag("cash")
-                Text("Gems").tag("gems")
-                Text("Fänge").tag("catches")
-            }
-            .pickerStyle(.segmented)
+            SegPicker(selection: $metric, options: [("cash", "Cash"), ("gems", "Gems"), ("catches", "Fänge")])
 
             if points.isEmpty || points.allSatisfy({ $0.value == 0 }) {
                 Text("Noch keine Daten in diesem Zeitraum.")
@@ -126,23 +126,18 @@ struct OverviewView: View {
                 .frame(height: 170)
             }
 
-            Picker("", selection: $hours) {
-                Text("6 h").tag(6)
-                Text("24 h").tag(24)
-                Text("7 T").tag(168)
+            HStack {
+                Text("pro Stunde, alle zusammen").font(.system(size: 12)).foregroundColor(Theme.faint)
+                Spacer()
+                SegPicker(selection: $hours, options: [(6, "6 h"), (24, "24 h"), (168, "7 T")]).frame(width: 170)
             }
-            .pickerStyle(.segmented)
-            Text("pro Stunde, alle Instanzen zusammen").font(.system(size: 12)).foregroundColor(Theme.muted)
         }
     }
 
     private func rarities(_ o: Overview) -> some View {
         Card(title: "Fänge nach Seltenheit", icon: "sparkles") {
-            Picker("", selection: $store.rarityRange) {
-                ForEach(ranges.indices, id: \.self) { i in Text(ranges[i].1).tag(ranges[i].0) }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: store.rarityRange) { _ in Task { await store.refresh() } }
+            SegPicker(selection: $store.rarityRange, options: ranges)
+                .onChange(of: store.rarityRange) { _ in Task { await store.refresh() } }
 
             let list = o.raritiesBestFirst
             if list.isEmpty {

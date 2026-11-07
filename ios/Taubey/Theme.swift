@@ -10,20 +10,24 @@ extension Color {
     }
 }
 
-/// The hub's own palette (lib/hub-ui.lua: Accent, Ink, Surface, Outline,
-/// Text, TextMuted) so the app looks like the menu and the dashboard.
+/// The web dashboard's tokens (taubey-hub/dashboard.html :root), so the app
+/// and the site are one thing.
 enum Theme {
-    static let ink = Color(hex: 0x08080D)
-    static let surface = Color(hex: 0x0F0F16)
-    static let raised = Color(hex: 0x16161F)
-    static let outline = Color(hex: 0x1F1F28)
-    static let text = Color(hex: 0xE8E8F0)
-    static let muted = Color(hex: 0x9696A2)
-    static let accent = Color(hex: 0x7C5CFF)
-    static let accentSoft = Color(hex: 0x7C5CFF, opacity: 0.16)
-    static let good = Color(hex: 0x3DDC84)
-    static let warn = Color(hex: 0xFFB020)
-    static let bad = Color(hex: 0xFF4D5E)
+    static let ink = Color(hex: 0x070709)          // --bg
+    static let surface = Color(hex: 0x0E0E12)      // --panel
+    static let raised = Color(hex: 0x15151B)       // --panel-2
+    static let line = Color.white.opacity(0.06)    // --line
+    static let line2 = Color.white.opacity(0.11)   // --line-2
+    static let outline = line
+    static let text = Color(hex: 0xF4F4F7)         // --text
+    static let muted = Color(hex: 0xA1A1AD)        // --dim
+    static let faint = Color(hex: 0x6B6B78)        // --dim-2
+    static let accent = Color(hex: 0x7C5CFF)       // --accent
+    static let accentSoft = Color(hex: 0x7C5CFF, opacity: 0.14)
+    static let good = Color(hex: 0x2EE6A6)
+    static let warn = Color(hex: 0xFFB547)
+    static let bad = Color(hex: 0xFF5D6C)
+    static let radius: CGFloat = 14
 
     // the dashboard's RCOL / RGRAD, so a rarity has the same colour everywhere
     static let rarityColor: [String: UInt32] = [
@@ -48,8 +52,7 @@ enum Theme {
         // unknown tier: a colour from its name (the same on every launch -
         // hashValue is not) rather than grey
         let sum = rarity.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
-        let h = Double(sum % 360) / 360
-        return Color(hue: h, saturation: 0.7, brightness: 0.95)
+        return Color(hue: Double(sum % 360) / 360, saturation: 0.7, brightness: 0.95)
     }
 
     static func gradient(rarity: String) -> LinearGradient {
@@ -59,53 +62,176 @@ enum Theme {
     }
 }
 
+// MARK: - the website's ambience: slow drifting light over a faint grid
+
+struct Ambience: View {
+    @State private var drift = false
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Theme.ink
+                Circle()
+                    .fill(Theme.accent.opacity(0.22))
+                    .frame(width: 420, height: 420)
+                    .blur(radius: 90)
+                    .offset(x: drift ? -geo.size.width * 0.05 : -geo.size.width * 0.3, y: drift ? -geo.size.height * 0.32 : -geo.size.height * 0.44)
+                    .animation(.easeInOut(duration: 26).repeatForever(autoreverses: true), value: drift)
+                Circle()
+                    .fill(Theme.good.opacity(0.09))
+                    .frame(width: 380, height: 380)
+                    .blur(radius: 90)
+                    .offset(x: drift ? geo.size.width * 0.2 : geo.size.width * 0.42, y: drift ? geo.size.height * 0.3 : geo.size.height * 0.45)
+                    .animation(.easeInOut(duration: 32).repeatForever(autoreverses: true), value: drift)
+                GridLines()
+                    .stroke(Theme.line, lineWidth: 1)
+                    .mask(RadialGradient(colors: [.black, .clear], center: .top, startRadius: 0, endRadius: geo.size.height * 0.7))
+                    .opacity(0.6)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .onAppear { drift = true }
+    }
+
+    private struct GridLines: Shape {
+        func path(in rect: CGRect) -> Path {
+            var p = Path()
+            let step: CGFloat = 44
+            var x: CGFloat = 0
+            while x <= rect.width { p.move(to: CGPoint(x: x, y: 0)); p.addLine(to: CGPoint(x: x, y: rect.height)); x += step }
+            var y: CGFloat = 0
+            while y <= rect.height { p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: rect.width, y: y)); y += step }
+            return p
+        }
+    }
+}
+
+extension View {
+    func screenBackground() -> some View {
+        self.background(Ambience())
+    }
+
+    /// The card surface: a breath of white from the top, a hairline edge.
+    func cardSurface(radius: CGFloat = Theme.radius) -> some View {
+        self
+            .background(
+                LinearGradient(colors: [Color.white.opacity(0.035), Color.white.opacity(0.012)], startPoint: .top, endPoint: .bottom)
+                    .background(Theme.surface.opacity(0.72))
+            )
+            .overlay(RoundedRectangle(cornerRadius: radius).stroke(Theme.line, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+    }
+
+    /// List rows on the card surface.
+    func rowSurface() -> some View {
+        self.listRowBackground(Theme.surface.opacity(0.72)).listRowSeparatorTint(Theme.line2)
+    }
+}
+
+// MARK: - building blocks
+
 struct Card<Content: View>: View {
     var title: String? = nil
     var icon: String? = nil
+    var trailing: String? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             if let title = title {
-                HStack(spacing: 8) {
+                HStack(spacing: 9) {
                     if let icon = icon {
-                        Image(systemName: icon).foregroundColor(Theme.accent).font(.system(size: 13, weight: .semibold))
+                        Image(systemName: icon).foregroundColor(Theme.muted).font(.system(size: 14, weight: .semibold))
                     }
-                    Text(title.uppercased())
-                        .font(.system(size: 12, weight: .semibold))
-                        .kerning(0.8)
-                        .foregroundColor(Theme.muted)
+                    Text(title).font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text)
                     Spacer()
+                    if let trailing = trailing { Chip(text: trailing) }
                 }
             }
             content
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surface)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.outline, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .cardSurface()
     }
 }
 
 struct Tile: View {
     let caption: String
     let value: String
+    var icon: String? = nil
+    var sub: String? = nil
     var tint: Color = Theme.text
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(caption).font(.system(size: 12, weight: .medium)).foregroundColor(Theme.muted)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                if let icon = icon { Image(systemName: icon).font(.system(size: 11, weight: .bold)) }
+                Text(caption.uppercased()).font(.system(size: 10.5, weight: .bold)).kerning(1)
+            }
+            .foregroundColor(Theme.faint)
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 25, weight: .heavy, design: .rounded))
+                .kerning(-0.4)
                 .foregroundColor(tint)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.55)
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.4), value: value)
+                .padding(.top, 9)
+            if let sub = sub {
+                Text(sub).font(.system(size: 11.5)).foregroundColor(Theme.faint).lineLimit(1).padding(.top, 5)
+            }
         }
-        .padding(14)
+        .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.raised)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .cardSurface()
+    }
+}
+
+struct Chip: View {
+    let text: String
+    var tint: Color? = nil
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11.5, weight: .semibold))
+            .foregroundColor(tint ?? Theme.muted)
+            .padding(.horizontal, 9).padding(.vertical, 3)
+            .background((tint ?? .white).opacity(tint == nil ? 0.05 : 0.08))
+            .overlay(Capsule().stroke((tint ?? .white).opacity(tint == nil ? 0.06 : 0.3), lineWidth: 1))
+            .clipShape(Capsule())
+    }
+}
+
+/// The site's segmented pills: the chosen one white with dark text.
+struct SegPicker<Value: Hashable>: View {
+    @Binding var selection: Value
+    let options: [(Value, String)]
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(options.indices, id: \.self) { i in
+                let on = options[i].0 == selection
+                Button {
+                    withAnimation(.easeOut(duration: 0.18)) { selection = options[i].0 }
+                } label: {
+                    Text(options[i].1)
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundColor(on ? Color(hex: 0x09090B) : Theme.muted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(on ? Theme.text : Color.clear)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(Color.white.opacity(0.04))
+        .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
+        .clipShape(Capsule())
     }
 }
 
@@ -115,9 +241,10 @@ struct RarityText: View {
 
     var body: some View {
         Text(name)
-            .font(.system(size: size, weight: .bold))
+            .font(.system(size: size, weight: .heavy))
             .foregroundColor(.clear)
-            .overlay(Theme.gradient(rarity: name).mask(Text(name).font(.system(size: size, weight: .bold))))
+            .overlay(Theme.gradient(rarity: name).mask(Text(name).font(.system(size: size, weight: .heavy))))
+            .shadow(color: .black.opacity(0.9), radius: 0.5, x: 0, y: 1)
     }
 }
 
@@ -125,9 +252,9 @@ struct StatusDot: View {
     let online: Bool
     var body: some View {
         Circle()
-            .fill(online ? Theme.good : Theme.muted.opacity(0.5))
-            .frame(width: 9, height: 9)
-            .shadow(color: online ? Theme.good.opacity(0.7) : .clear, radius: 4)
+            .fill(online ? Theme.good : Theme.faint)
+            .frame(width: 8, height: 8)
+            .shadow(color: online ? Theme.good.opacity(0.8) : .clear, radius: 5)
     }
 }
 
@@ -136,11 +263,12 @@ struct ErrorBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundColor(Theme.warn)
-            Text(text).font(.system(size: 14)).foregroundColor(Theme.text)
+            Text(text).font(.system(size: 13.5)).foregroundColor(Theme.text)
             Spacer()
         }
         .padding(12)
-        .background(Theme.warn.opacity(0.12))
+        .background(Theme.warn.opacity(0.08))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.warn.opacity(0.3), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -152,17 +280,27 @@ struct EmptyHint: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: icon).font(.system(size: 34)).foregroundColor(Theme.accent)
-            Text(title).font(.system(size: 17, weight: .semibold)).foregroundColor(Theme.text)
-            Text(text).font(.system(size: 14)).foregroundColor(Theme.muted).multilineTextAlignment(.center)
+            Image(systemName: icon).font(.system(size: 32)).foregroundColor(Theme.faint)
+            Text(title).font(.system(size: 16, weight: .semibold)).foregroundColor(Theme.text)
+            Text(text).font(.system(size: 13.5)).foregroundColor(Theme.faint).multilineTextAlignment(.center)
         }
         .padding(30)
         .frame(maxWidth: .infinity)
     }
 }
 
-extension View {
-    func screenBackground() -> some View {
-        self.background(Theme.ink.ignoresSafeArea())
+/// The accent button with the site's glow.
+struct AccentButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.vertical, 13)
+            .frame(maxWidth: .infinity)
+            .background(Theme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Theme.accent.opacity(configuration.isPressed ? 0.2 : 0.45), radius: 16, y: 6)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }

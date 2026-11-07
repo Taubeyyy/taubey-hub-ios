@@ -6,16 +6,14 @@ struct EventsView: View {
     @State private var kind = ""
     @State private var loaded = false
 
-    private let kinds = [("", "Alle"), ("catch", "Fänge"), ("trouble", "Probleme"), ("server", "Server")]
+    private let kinds: [(String, String)] = [("", "Alle"), ("catch", "Fänge"), ("trouble", "Probleme"), ("server", "Server")]
 
     var body: some View {
         NavigationStack {
             List {
-                Picker("", selection: $kind) {
-                    ForEach(kinds.indices, id: \.self) { i in Text(kinds[i].1).tag(kinds[i].0) }
-                }
-                .pickerStyle(.segmented)
-                .listRowBackground(Color.clear)
+                SegPicker(selection: $kind, options: kinds)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
 
                 if let error = store.error { ErrorBanner(text: error).listRowBackground(Color.clear) }
                 if loaded && events.isEmpty {
@@ -23,7 +21,7 @@ struct EventsView: View {
                         .listRowBackground(Color.clear)
                 }
                 ForEach(events) { e in
-                    EventRow(event: e).listRowBackground(Theme.surface)
+                    EventRow(event: e).rowSurface()
                 }
             }
             .listStyle(.insetGrouped)

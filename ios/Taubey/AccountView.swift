@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AccountView: View {
     @EnvironmentObject var store: HubStore
+    @EnvironmentObject var notifier: Notifier
     @State private var confirmLogout = false
 
     private var version: String {
@@ -24,7 +25,29 @@ struct AccountView: View {
                     }
                     .padding(.vertical, 6)
                 }
-                .listRowBackground(Theme.surface)
+                .rowSurface()
+
+                Section {
+                    if notifier.allowed == false {
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                        } label: {
+                            Label("Mitteilungen sind aus – in den Einstellungen erlauben", systemImage: "bell.slash")
+                                .foregroundColor(Theme.warn)
+                        }
+                    }
+                    Toggle(isOn: $notifier.catches) { Label("Gute Fänge", systemImage: "sparkles") }
+                    Toggle(isOn: $notifier.trouble) { Label("Probleme", systemImage: "exclamationmark.triangle") }
+                    Toggle(isOn: $notifier.offline) { Label("Instanz geht offline", systemImage: "bolt.horizontal.circle") }
+                    Toggle(isOn: $notifier.server) { Label("Rejoins und Serverwechsel", systemImage: "arrow.triangle.2.circlepath") }
+                } header: {
+                    Text("Mitteilungen")
+                } footer: {
+                    Text("Welche Fänge zählen, stellst du im Web-Dashboard unter Alerts ein. Bei offener App kommen Mitteilungen sofort, sonst wenn iOS die App im Hintergrund kurz weckt – das entscheidet iOS, meist alle 15 Minuten bis paar Stunden.")
+                        .foregroundColor(Theme.faint)
+                }
+                .tint(Theme.accent)
+                .rowSurface()
 
                 if let o = store.overview, !o.groups.isEmpty, o.groups.contains(where: { !$0.name.isEmpty }) {
                     Section("Gruppen") {
@@ -36,7 +59,7 @@ struct AccountView: View {
                             }
                         }
                     }
-                    .listRowBackground(Theme.surface)
+                    .rowSurface()
                 }
 
                 Section("Alle Instanzen") {
@@ -50,7 +73,7 @@ struct AccountView: View {
                     }
                     .disabled(ids.isEmpty)
                 }
-                .listRowBackground(Theme.surface)
+                .rowSurface()
 
                 Section {
                     Link(destination: URL(string: "https://taubey.com/dashboard")!) {
@@ -63,7 +86,7 @@ struct AccountView: View {
                 } footer: {
                     Text("Taubey Hub \(version)").foregroundColor(Theme.muted)
                 }
-                .listRowBackground(Theme.surface)
+                .rowSurface()
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
