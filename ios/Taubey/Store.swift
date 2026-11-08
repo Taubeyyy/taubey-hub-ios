@@ -60,6 +60,21 @@ final class HubStore: ObservableObject {
     let api: HubAPI
 
     init() {
+        let args = ProcessInfo.processInfo.arguments
+        // the CI's simulator tour: signed in with sample data, or at the sign-in
+        if args.contains("-uitest") {
+            session = "demo"
+            api = HubAPI(session: "demo")
+            api.demo = true
+            who = "Taubey"
+            return
+        }
+        if args.contains("-uitest-signedout") {
+            session = nil
+            api = HubAPI(session: nil)
+            who = ""
+            return
+        }
         let saved = Vault.read()
         session = saved
         api = HubAPI(session: saved)

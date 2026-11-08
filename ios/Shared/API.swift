@@ -36,6 +36,8 @@ final class HubAPI {
     static let base = URL(string: "https://taubey.com")!
 
     var session: String?
+    /// The simulator tour: answers come from Demo, nothing goes out.
+    var demo = false
     private let http: URLSession
 
     init(session: String?) {
@@ -91,17 +93,20 @@ final class HubAPI {
     }
 
     func get(_ path: String) async throws -> JSONValue {
-        try await send(request(path, method: "GET", body: nil)).0
+        if demo { return Demo.answer(path) }
+        return try await send(request(path, method: "GET", body: nil)).0
     }
 
     @discardableResult
     func post(_ path: String, _ body: JSONValue = .object([:])) async throws -> JSONValue {
-        try await send(request(path, method: "POST", body: body)).0
+        if demo { return Demo.answer(path) }
+        return try await send(request(path, method: "POST", body: body)).0
     }
 
     @discardableResult
     func delete(_ path: String) async throws -> JSONValue {
-        try await send(request(path, method: "DELETE", body: nil)).0
+        if demo { return Demo.answer(path) }
+        return try await send(request(path, method: "DELETE", body: nil)).0
     }
 
     /// Trades a dashboard code for a session. Returns the session and the name

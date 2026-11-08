@@ -78,3 +78,36 @@ jobs:
       - name: Errors at a glance
         if: failure()
         run: grep -E "error:|✗ FAIL" "$RUNNER_TEMP/build.log" | head -80 || true
+
+  # Taps through the app in the simulator with sample data and uploads a
+  # photo of every screen (artifact Screens-<run>) - the only way to see the
+  # design without a phone in hand.
+  ui:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tools
+        run: brew install xcodegen
+
+      - name: Generate the Xcode project
+        run: xcodegen generate
+
+      - name: Tour in the simulator
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/shots"
+          DEVICE=$(xcrun simctl list devices available | grep -m1 -oE "iPhone 1[5-7][^(]*" | sed 's/ *$//')
+          echo "Simulator: $DEVICE"
+          TEST_RUNNER_SHOT_DIR="$RUNNER_TEMP/shots" xcodebuild test -project Taubey.xcodeproj -scheme Taubey \
+            -destination "platform=iOS Simulator,name=$DEVICE" -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/ui.log" | grep -E "error:|Test Case|failed|passed" | tail -40
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Screens-${{ github.run_number }}
+          path: ${{ runner.temp }}/shots

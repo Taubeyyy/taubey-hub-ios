@@ -126,6 +126,14 @@ check(AlertLogic.onlineIds(agentsNow) == ["100000000000000001|taubeyyyy|fish an 
 check(AlertLogic.wentOffline(previous: ["729|alt|adopt me!"], agents: agentsNow).map { $0.account } == ["Alt"], "went offline")
 check(AlertLogic.wentOffline(previous: [], agents: agentsNow).isEmpty, "nothing was online")
 
+// the simulator tour's sample data has to parse like the real thing
+let demoOverview = Overview(Demo.answer("/api/overview?range=session"))
+check(demoOverview.agents.count == 2 && demoOverview.events.count == 5, "demo overview got \(demoOverview.agents.count)/\(demoOverview.events.count)")
+check(Overview(Demo.answer("/api/overview?range=session&account=Alt")).agents.count == 1, "demo account filter")
+check(Inventory(Demo.answer("/api/inventory")).rows.count == 2, "demo inventory")
+check(Schema(Demo.answer("/api/game/x/schema")["schema"])?.tabs.count == 4, "demo schema")
+check(parseHistory(Demo.answer("/api/history?metric=cash")).count == 48, "demo history")
+
 check(HubAPI.accountQuery("") == "", "no account, no filter")
 check(HubAPI.accountQuery("Taubey yyy") == "&account=Taubey%20yyy", "account encoded got \(HubAPI.accountQuery("Taubey yyy"))")
 
