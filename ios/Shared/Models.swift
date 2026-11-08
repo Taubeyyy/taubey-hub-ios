@@ -314,10 +314,16 @@ struct AgentConfig {
         defaults = j["defaults"].object ?? [:]
     }
 
-    /// What the instance runs with: its own setting, else the game default,
-    /// else what it last reported.
+    init(current: [String: JSONValue], overrides: [String: JSONValue], defaults: [String: JSONValue]) {
+        self.current = current
+        self.overrides = overrides
+        self.defaults = defaults
+    }
+
+    /// What the instance is set to run with: its own setting, else the game
+    /// default (which the server sends to it), else what it last reported.
     func value(_ key: String) -> JSONValue {
-        overrides[key] ?? current[key] ?? defaults[key] ?? .null
+        overrides[key] ?? defaults[key] ?? current[key] ?? .null
     }
 }
 

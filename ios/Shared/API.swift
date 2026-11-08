@@ -141,6 +141,12 @@ final class HubAPI {
         return Schema(try await get("/api/game/\(g)/schema")["schema"])
     }
 
+    /// The default every instance of a game follows unless it overrides it.
+    func gameDefaults(game: String) async throws -> [String: JSONValue] {
+        let g = game.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? game
+        return try await get("/api/game/\(g)/config")["config"].object ?? [:]
+    }
+
     func config(agent: String) async throws -> AgentConfig {
         let id = agent.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? agent
         return AgentConfig(try await get("/api/agent/\(id)"))

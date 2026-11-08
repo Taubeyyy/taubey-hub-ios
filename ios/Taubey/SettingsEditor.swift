@@ -1,13 +1,23 @@
 import SwiftUI
 
 /// The script's own menu, rebuilt from the schema it reports: the same tabs,
-/// the same boxes, the same controls. Changes are collected and sent in one
-/// go - either for this instance only, or as the default every instance of
-/// the game follows.
+/// the same boxes, the same controls. Two targets:
+///   - one instance: its own settings (overrides), or pushed up as the game default
+///   - a whole game: the default every instance of it follows unless it
+///     overrides the setting itself - also for instances that are offline,
+///     they pick it up on their next beat
+/// Changes are collected and sent together, or - "Sofort senden" - one by one
+/// the moment they are made, like the web dashboard's "Send instantly".
 struct SettingsEditor: View {
-    @EnvironmentObject var store: HubStore
-    let agent: Agent
+    enum Target: Hashable {
+        case agent(Agent)
+        case game(String)
+    }
 
+    @EnvironmentObject var store: HubStore
+    let target: Target
+
+    @AppStorage("config.instant") private var instant = false
     @State private var schema: Schema?
     @State private var config: AgentConfig?
     @State private var loaded = false
@@ -16,6 +26,21 @@ struct SettingsEditor: View {
     @State private var search = ""
     @State private var sending = false
     @State private var asDefault = false
+
+    init(agent: Agent) { target = .agent(agent) }
+    init(game: String) { target = .game(game) }
+
+    private var game: String {
+        switch target {
+        case .agent(let a): return a.game
+        case .game(let g): return g
+        }
+    }
+
+    private var agentId: String? {
+        if case .agent(let a) = target { return a.id }
+        return nil
+    }
 
     var body: some View {
         Group {
@@ -29,22 +54,54 @@ struct SettingsEditor: View {
             }
         }
         .screenBackground()
-        .navigationTitle("Einstellungen")
+        .navigationTitle(agentId == nil ? "Standard · \(game)" : "Einstellungen")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Toggle(isOn: $instant) { Label("Sofort senden", systemImage: "bolt") }
+                    Button { Task { await load() } } label: { Label("Neu laden", systemImage: "arrow.clockwise") }
+                } label: {
+                    Image(systemName: instant ? "bolt.circle.fill" : "ellipsis.circle")
+                }
+            }
+        }
         .task { await load() }
     }
 
     @MainActor
     private func load() async {
-        let game = agent.game, id = agent.id
+        let game = self.game
         // one after the other: both run on the main actor anyway, and an
         // `async let` here would read the store off it
         let schemaResult = await store.call({ try await store.api.schema(game: game) })
-        let configResult = await store.call({ try await store.api.config(agent: id) })
         schema = schemaResult ?? nil
-        config = configResult
+        if let id = agentId {
+            config = await store.call({ try await store.api.config(agent: id) })
+        } else {
+            // the game default; values it does not set are shown as an
+            // instance of that game last reported them
+            let defaults = await store.call({ try await store.api.gameDefaults(game: game) }) ?? [:]
+            let agents = (store.overview?.agents ?? []).filter { $0.game == game }
+            var current: [String: JSONValue] = [:]
+            if let sample = agents.first(where: { $0.online }) ?? agents.first {
+                let sampleId = sample.id
+                current = await store.call({ try await store.api.config(agent: sampleId) })?.current ?? [:]
+            }
+            config = AgentConfig(current: current, overrides: defaults, defaults: [:])
+        }
         if tab.isEmpty { tab = schema?.tabs.first ?? "" }
         loaded = true
+    }
+
+    /// One change: kept for the send bar, or - instantly - out at once. Text
+    /// fields always wait for the button, or every letter would be sent.
+    private func change(_ item: SchemaItem, _ value: JSONValue) {
+        if instant && item.kind != .input {
+            Task { await send(only: [item.key: value]) }
+        } else {
+            changes[item.key] = value
+        }
     }
 
     private func editor(_ schema: Schema, _ config: AgentConfig) -> some View {
@@ -75,8 +132,9 @@ struct SettingsEditor: View {
                             ControlRow(item: item,
                                        value: changes[item.key] ?? config.value(item.key),
                                        own: config.overrides[item.key] != nil,
+                                       ownLabel: agentId == nil ? "Standard" : "eigen",
                                        changed: changes[item.key] != nil) { newValue in
-                                changes[item.key] = newValue
+                                change(item, newValue)
                             }
                             .rowSurface()
                         }
@@ -108,7 +166,12 @@ struct SettingsEditor: View {
 
     private var sendBar: some View {
         VStack(spacing: 10) {
-            SegPicker(selection: $asDefault, options: [(false, "Nur diese Instanz"), (true, "Standard fürs Spiel")])
+            if agentId != nil {
+                SegPicker(selection: $asDefault, options: [(false, "Nur diese Instanz"), (true, "Standard fürs Spiel")])
+            } else {
+                Text("Gilt für jede \(game)-Instanz ohne eigene Einstellung – auch für Offline, beim nächsten Start.")
+                    .font(.system(size: 12)).foregroundColor(Theme.faint).frame(maxWidth: .infinity, alignment: .leading)
+            }
             HStack(spacing: 10) {
                 Button("Verwerfen") { changes = [:] }
                     .foregroundColor(Theme.muted)
@@ -137,13 +200,25 @@ struct SettingsEditor: View {
     }
 
     @MainActor
-    private func send() async {
+    private func send(only: [String: JSONValue]? = nil) async {
         sending = true
-        let pending = changes, id = agent.id, game = agent.game, everyone = asDefault
+        let pending = only ?? changes, game = self.game
+        let id = agentId ?? "", everyone = agentId == nil || asDefault
         if await store.call({ try await store.api.apply(changes: pending, agent: id, game: game, asDefault: everyone) }) != nil {
-            store.say(everyone ? "Als Standard gespeichert" : "Gesendet - kommt in ein paar Sekunden an")
-            changes = [:]
-            if let c = await store.call({ try await store.api.config(agent: id) }) { config = c }
+            if only == nil {
+                store.say(everyone ? "Als Standard gespeichert" : "Gesendet – kommt in ein paar Sekunden an")
+                changes = [:]
+            } else {
+                store.say("✓ gesendet")
+            }
+            // what is now in effect, so the badges and values are right
+            if let c = config {
+                var over = c.overrides, defs = c.defaults
+                for (k, v) in pending {
+                    if everyone && agentId != nil { defs[k] = v } else { over[k] = v }
+                }
+                config = AgentConfig(current: c.current, overrides: over, defaults: defs)
+            }
         }
         sending = false
     }
@@ -154,6 +229,7 @@ struct ControlRow: View {
     let item: SchemaItem
     let value: JSONValue
     let own: Bool
+    var ownLabel: String = "eigen"
     let changed: Bool
     let set: (JSONValue) -> Void
 
@@ -173,7 +249,7 @@ struct ControlRow: View {
             if changed {
                 Circle().fill(Theme.accent).frame(width: 7, height: 7)
             } else if own {
-                Text("eigen").font(.system(size: 10, weight: .bold)).foregroundColor(Theme.accent)
+                Text(ownLabel).font(.system(size: 10, weight: .bold)).foregroundColor(Theme.accent)
                     .padding(.horizontal, 5).padding(.vertical, 1)
                     .background(Theme.accentSoft).clipShape(Capsule())
             }

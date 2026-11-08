@@ -21,6 +21,24 @@ struct InstancesView: View {
                 }
                 ForEach(games, id: \.self) { game in
                     Section {
+                        NavigationLink {
+                            SettingsEditor(game: game)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Theme.accent)
+                                    .frame(width: 30, height: 30)
+                                    .background(Theme.accentSoft)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Einstellungen für alle").font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
+                                    Text("Standard für jede Instanz – auch offline").font(.system(size: 12)).foregroundColor(Theme.faint)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        .rowSurface()
                         ForEach(agents.filter { $0.game == game }.sorted(by: order)) { agent in
                             NavigationLink(value: agent) { AgentRow(agent: agent) }
                                 .rowSurface()
