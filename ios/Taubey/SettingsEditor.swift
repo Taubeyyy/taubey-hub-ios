@@ -25,7 +25,7 @@ struct SettingsEditor: View {
     @State private var changes: [String: JSONValue] = [:]
     @State private var search = ""
     @State private var sending = false
-    @State private var asDefault = false
+    @State private var confirmAll = false
 
     init(agent: Agent) { target = .agent(agent) }
     init(game: String) { target = .game(game) }
@@ -97,7 +97,8 @@ struct SettingsEditor: View {
     /// One change: kept for the send bar, or - instantly - out at once. Text
     /// fields always wait for the button, or every letter would be sent.
     private func change(_ item: SchemaItem, _ value: JSONValue) {
-        if instant && item.kind != .input {
+        // settings for every instance always wait for the button and a "sure?"
+        if instant && item.kind != .input && agentId != nil {
             Task { await send(only: [item.key: value]) }
         } else {
             changes[item.key] = value
@@ -166,18 +167,18 @@ struct SettingsEditor: View {
 
     private var sendBar: some View {
         VStack(spacing: 10) {
-            if agentId != nil {
-                SegPicker(selection: $asDefault, options: [(false, "Nur diese Instanz"), (true, "Standard fürs Spiel")])
-            } else {
-                Text("Gilt für jede \(game)-Instanz ohne eigene Einstellung – auch für Offline, beim nächsten Start.")
-                    .font(.system(size: 12)).foregroundColor(Theme.faint).frame(maxWidth: .infinity, alignment: .leading)
-            }
+            // every account keeps its own settings: a change here goes to this
+            // instance only. "For all" is its own screen and asks first.
+            Text(agentId != nil
+                 ? "Gilt nur für diese Instanz. Für alle: Instanzen › Einstellungen für alle."
+                 : "Gilt für jede \(game)-Instanz ohne eigene Einstellung – auch für Offline, beim nächsten Start.")
+                .font(.system(size: 12)).foregroundColor(Theme.faint).frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 10) {
                 Button("Verwerfen") { changes = [:] }
                     .foregroundColor(Theme.muted)
                     .padding(.horizontal, 12)
                 Button {
-                    Task { await send() }
+                    if agentId == nil { confirmAll = true } else { Task { await send() } }
                 } label: {
                     HStack {
                         Spacer()
@@ -197,13 +198,17 @@ struct SettingsEditor: View {
         .padding(14)
         .background(Theme.surface.ignoresSafeArea(edges: .bottom))
         .overlay(Rectangle().fill(Theme.outline).frame(height: 1), alignment: .top)
+        .confirmationDialog("Für ALLE \(game)-Instanzen setzen? Accounts mit eigener Einstellung behalten ihre.",
+                            isPresented: $confirmAll, titleVisibility: .visible) {
+            Button("Für alle setzen") { Task { await send() } }
+        }
     }
 
     @MainActor
     private func send(only: [String: JSONValue]? = nil) async {
         sending = true
         let pending = only ?? changes, game = self.game
-        let id = agentId ?? "", everyone = agentId == nil || asDefault
+        let id = agentId ?? "", everyone = agentId == nil
         if await store.call({ try await store.api.apply(changes: pending, agent: id, game: game, asDefault: everyone) }) != nil {
             if only == nil {
                 store.say(everyone ? "Als Standard gespeichert" : "Gesendet – kommt in ein paar Sekunden an")
