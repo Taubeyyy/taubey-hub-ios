@@ -119,8 +119,14 @@ final class HubAPI {
 
     // MARK: - calls the app makes
 
-    func overview(range: String) async throws -> Overview {
-        Overview(try await get("/api/overview?range=\(range)"))
+    /// `account` narrows everything to one Roblox account; empty = all.
+    func overview(range: String, account: String = "") async throws -> Overview {
+        Overview(try await get("/api/overview?range=\(range)" + HubAPI.accountQuery(account)))
+    }
+
+    static func accountQuery(_ account: String) -> String {
+        guard !account.isEmpty, let a = account.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else { return "" }
+        return "&account=\(a)"
     }
 
     func inventory() async throws -> Inventory {
@@ -132,8 +138,8 @@ final class HubAPI {
         return (try await get("/api/events?limit=150\(q)")["rows"].array ?? []).compactMap(HubEvent.init)
     }
 
-    func history(metric: String, hours: Int) async throws -> [HistoryPoint] {
-        parseHistory(try await get("/api/history?metric=\(metric)&hours=\(hours)"))
+    func history(metric: String, hours: Int, account: String = "") async throws -> [HistoryPoint] {
+        parseHistory(try await get("/api/history?metric=\(metric)&hours=\(hours)" + HubAPI.accountQuery(account)))
     }
 
     func schema(game: String) async throws -> Schema? {

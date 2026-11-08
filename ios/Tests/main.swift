@@ -126,5 +126,8 @@ check(AlertLogic.onlineIds(agentsNow) == ["100000000000000001|taubeyyyy|fish an 
 check(AlertLogic.wentOffline(previous: ["729|alt|adopt me!"], agents: agentsNow).map { $0.account } == ["Alt"], "went offline")
 check(AlertLogic.wentOffline(previous: [], agents: agentsNow).isEmpty, "nothing was online")
 
+check(HubAPI.accountQuery("") == "", "no account, no filter")
+check(HubAPI.accountQuery("Taubey yyy") == "&account=Taubey%20yyy", "account encoded got \(HubAPI.accountQuery("Taubey yyy"))")
+
 print("\(passed) passed, \(failures) failed")
 if failures > 0 { exit(1) }

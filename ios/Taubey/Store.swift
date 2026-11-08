@@ -42,7 +42,16 @@ enum Vault {
 final class HubStore: ObservableObject {
     @Published var session: String?
     @Published var who: String
+    /// Every instance - the Instances tab, notifications.
     @Published var overview: Overview?
+    /// The overview page narrowed to `account` (nil while that is "all").
+    @Published var focus: Overview?
+    @Published var account: String = UserDefaults.standard.string(forKey: "focus.account") ?? "" {
+        didSet {
+            UserDefaults.standard.set(account, forKey: "focus.account")
+            if account.isEmpty { focus = nil }
+        }
+    }
     @Published var rarityRange = "session"
     @Published var error: String?
     @Published var lastUpdate: Date?
@@ -101,6 +110,25 @@ final class HubStore: ObservableObject {
             lastUpdate = Date()
             Notifier.shared.check(events: o.events, agents: o.agents)
         }
+        let picked = account
+        if !picked.isEmpty {
+            // an account that no longer reports falls back to all
+            if let all = overview, !all.agents.contains(where: { $0.account == picked }) {
+                account = ""
+            } else if let f = await call({ try await api.overview(range: range, account: picked) }), account == picked {
+                focus = f
+            }
+        }
+    }
+
+    /// Every account that reports, for the switch.
+    var accounts: [String] {
+        Array(Set((overview?.agents ?? []).map { $0.account })).sorted { $0.lowercased() < $1.lowercased() }
+    }
+
+    /// What the overview page shows.
+    var shown: Overview? {
+        account.isEmpty ? overview : (focus ?? nil)
     }
 
     func say(_ text: String) {

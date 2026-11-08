@@ -13,8 +13,9 @@ struct OverviewView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    if store.accounts.count > 1 { accountSwitch }
                     if let error = store.error { ErrorBanner(text: error) }
-                    if let o = store.overview {
+                    if let o = store.shown {
                         tiles(o)
                         if let next = o.nextRebirth { rebirth(next) }
                         chart
@@ -39,14 +40,49 @@ struct OverviewView: View {
                     }
                 }
             }
-            .task(id: "\(metric)-\(hours)") { await loadHistory() }
+            .task(id: "\(metric)-\(hours)-\(store.account)") { await loadHistory() }
         }
     }
 
     @MainActor
     private func loadHistory() async {
-        let m = metric, h = hours
-        if let p = await store.call({ try await store.api.history(metric: m, hours: h) }) { points = p }
+        let m = metric, h = hours, a = store.account
+        if let p = await store.call({ try await store.api.history(metric: m, hours: h, account: a) }) { points = p }
+    }
+
+    /// All accounts together, or one: pills that scroll sideways, with a dot
+    /// for whether that account's instance is online.
+    private var accountSwitch: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                accountPill("", title: "Alle", online: (store.overview?.online ?? 0) > 0)
+                ForEach(store.accounts, id: \.self) { name in
+                    accountPill(name, title: name,
+                                online: (store.overview?.agents ?? []).contains(where: { $0.account == name && $0.online }))
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private func accountPill(_ value: String, title: String, online: Bool) -> some View {
+        let on = store.account == value
+        return Button {
+            guard store.account != value else { return }
+            store.account = value
+            Task { await store.refresh() }
+        } label: {
+            HStack(spacing: 7) {
+                if !value.isEmpty { StatusDot(online: online) }
+                Text(title).font(.system(size: 13.5, weight: .semibold))
+            }
+            .foregroundColor(on ? Color(hex: 0x09090B) : Theme.text)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(on ? Theme.text : Color.white.opacity(0.05))
+            .overlay(Capsule().stroke(on ? Color.clear : Theme.line2, lineWidth: 1))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: sections
