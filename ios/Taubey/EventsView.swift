@@ -20,8 +20,16 @@ struct EventsView: View {
                     EmptyHint(icon: "bell.slash", title: "Keine Events", text: "Hier landen gute Fänge, Rejoins und Probleme.")
                         .listRowBackground(Color.clear)
                 }
-                ForEach(events) { e in
-                    EventRow(event: e).rowSurface()
+                // one section per day, newest first
+                let days = Dictionary(grouping: events) { Calendar.current.startOfDay(for: $0.at) }
+                ForEach(days.keys.sorted(by: >), id: \.self) { day in
+                    Section {
+                        ForEach(days[day] ?? []) { e in
+                            EventRow(event: e).rowSurface()
+                        }
+                    } header: {
+                        Text(dayTitle(day)).foregroundColor(Theme.muted)
+                    }
                 }
             }
             .listStyle(.insetGrouped)

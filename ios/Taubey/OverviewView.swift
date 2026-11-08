@@ -35,9 +35,7 @@ struct OverviewView: View {
             .navigationTitle(store.who.isEmpty ? "Übersicht" : "Hi, \(store.who)")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if let at = store.lastUpdate {
-                        Text(at, style: .time).font(.system(size: 12)).foregroundColor(Theme.muted)
-                    }
+                    LiveChip(online: (store.overview?.online ?? 0) > 0, at: store.lastUpdate)
                 }
             }
             .task(id: "\(metric)-\(hours)-\(store.account)") { await loadHistory() }
@@ -179,17 +177,22 @@ struct OverviewView: View {
             if list.isEmpty {
                 Text("Noch nichts gefangen.").font(.system(size: 14)).foregroundColor(Theme.muted)
             } else {
-                let top = list.map { $0.count }.max() ?? 1
-                VStack(spacing: 8) {
+                // log scale: one God next to 800 Commons is still a bar you can see
+                let top = log10((list.map { $0.count }.max() ?? 1) + 1)
+                VStack(spacing: 9) {
                     ForEach(list) { row in
                         HStack(spacing: 10) {
                             RarityText(name: row.name, size: 14).frame(width: 110, alignment: .leading)
                             GeometryReader { geo in
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Theme.gradient(rarity: row.name))
-                                    .frame(width: max(4, geo.size.width * CGFloat(row.count / max(1, top))))
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.white.opacity(0.04))
+                                    Capsule()
+                                        .fill(Theme.gradient(rarity: row.name))
+                                        .frame(width: max(8, geo.size.width * CGFloat(log10(row.count + 1) / max(0.3, top))))
+                                        .shadow(color: Theme.color(rarity: row.name).opacity(0.45), radius: 4)
+                                }
                             }
-                            .frame(height: 8)
+                            .frame(height: 7)
                             Text(Format.number(row.count))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundColor(Theme.text)

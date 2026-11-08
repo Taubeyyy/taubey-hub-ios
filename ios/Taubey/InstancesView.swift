@@ -19,6 +19,15 @@ struct InstancesView: View {
                               text: "Starte ein Script und schalte im Menü unter Settings > Dashboard „Report to the dashboard“ ein.")
                         .listRowBackground(Color.clear)
                 }
+                if let o = store.overview, !agents.isEmpty {
+                    HStack(spacing: 10) {
+                        Tile(caption: "Online", value: "\(o.online) / \(o.total)", icon: "dot.radiowaves.left.and.right",
+                             tint: o.online == o.total ? Theme.good : Theme.warn)
+                        Tile(caption: "Cash / s", value: Format.number(o.cashPerSec), icon: "dollarsign.circle")
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                }
                 ForEach(games, id: \.self) { game in
                     Section {
                         NavigationLink {
@@ -87,7 +96,7 @@ struct AgentRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            StatusDot(online: agent.online)
+            Avatar(name: agent.account, size: 38, online: agent.online)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(agent.account).font(.system(size: 16, weight: .semibold)).foregroundColor(Theme.text)
@@ -138,7 +147,7 @@ struct InstanceDetailView: View {
                     NavigationLink {
                         SettingsEditor(agent: agent)
                     } label: {
-                        row("Script-Einstellungen bearbeiten", icon: "gearshape", detail: agent.overrides > 0 ? "\(agent.overrides) eigene" : nil)
+                        row("Einstellungen bearbeiten", icon: "gearshape", detail: agent.overrides > 0 ? "\(agent.overrides) eigene" : nil)
                     }
                     Divider().background(Theme.outline)
                     Button { confirmReset = true } label: {
@@ -182,7 +191,7 @@ struct InstanceDetailView: View {
     private var header: some View {
         Card {
             HStack(spacing: 12) {
-                StatusDot(online: agent.online)
+                Avatar(name: agent.account, size: 44, online: agent.online)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(agent.game).font(.system(size: 13)).foregroundColor(Theme.muted)
                     Text(agent.online ? (agent.note.isEmpty ? "läuft" : agent.note) : "offline")
@@ -267,10 +276,20 @@ struct InstanceDetailView: View {
 
     private func row(_ title: String, icon: String, detail: String?) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).foregroundColor(Theme.accent).frame(width: 22)
-            Text(title).font(.system(size: 15)).foregroundColor(Theme.text)
-            Spacer()
-            if let detail = detail { Text(detail).font(.system(size: 13)).foregroundColor(Theme.muted) }
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Theme.accent)
+                .frame(width: 30, height: 30)
+                .background(Theme.accentSoft)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let detail = detail { Chip(text: detail) }
             Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundColor(Theme.muted)
         }
         .padding(.vertical, 4)

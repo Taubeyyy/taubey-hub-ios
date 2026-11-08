@@ -12,16 +12,24 @@ struct LoginView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("TAUBEY")
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .kerning(4)
-                        .foregroundColor(Theme.text)
-                    Text("Deine Farm-Instanzen, überall.")
-                        .font(.system(size: 16))
-                        .foregroundColor(Theme.muted)
+                VStack(alignment: .leading, spacing: 14) {
+                    Image("Logo")
+                        .resizable()
+                        .frame(width: 76, height: 76)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
+                        .shadow(color: Theme.accent.opacity(0.55), radius: 24, y: 8)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("TAUBEY")
+                            .font(.system(size: 34, weight: .heavy, design: .rounded))
+                            .kerning(4)
+                            .foregroundColor(Theme.text)
+                        Text("Deine Farm-Instanzen, überall.")
+                            .font(.system(size: 16))
+                            .foregroundColor(Theme.muted)
+                    }
                 }
-                .padding(.top, 40)
+                .padding(.top, 36)
 
                 Card(title: "So meldest du dich an", icon: "key.fill") {
                     VStack(alignment: .leading, spacing: 10) {

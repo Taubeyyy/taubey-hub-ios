@@ -55,7 +55,7 @@ final class TaubeyUITests: XCTestCase {
             app.swipeUp()
             sleep(1)
             shot("07-instanz-unten")
-            let edit = app.buttons["Script-Einstellungen bearbeiten"].firstMatch
+            let edit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Einstellungen bearbeiten'")).firstMatch
             if edit.waitForExistence(timeout: 3) {
                 edit.tap()
                 sleep(2)

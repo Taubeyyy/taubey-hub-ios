@@ -51,10 +51,18 @@ enum Demo {
          "overrides":0,"pending":1,"age":9,"uptime":184000,"online":true}
         """
         let agents = altOnly ? "[\(alt)]" : "[\(main),\(alt)]"
+        let totals = altOnly
+            ? """
+              {"online":1,"total":1,"cash":9800000000000000000,"gems":120400,"cashPerSec":1200000000000000,"gemsPerMin":3100,
+               "catches":41022,"catchesPerMin":204.5,"rebirths":88,"nextRebirth":null}
+              """
+            : """
+              {"online":2,"total":2,"cash":206123101412664670000,"gems":3535498,
+               "cashPerSec":114370867251891070,"gemsPerMin":9885.8,"catches":49235,"catchesPerMin":481.7,"rebirths":281,
+               "nextRebirth":{"account":"Taubeyyyy","cost":286791049603165450000,"short":80667948190500780000,"eta":713}}
+              """
         return """
-        {"ok":true,"who":"Taubey","totals":{"online":\(altOnly ? 1 : 2),"total":\(altOnly ? 1 : 2),"cash":206123101412664670000,"gems":3535498,
-          "cashPerSec":114370867251891070,"gemsPerMin":9885.8,"catches":49235,"catchesPerMin":481.7,"rebirths":281,
-          "nextRebirth":{"account":"Taubeyyyy","cost":286791049603165450000,"short":80667948190500780000,"eta":713}},
+        {"ok":true,"who":"Taubey","totals":\(totals),
          "rarities":{"Common":812,"Rare":640,"Epic":402,"Legendary":288,"Cosmic":154,"Secret":155,"Rainbow":168,"Ascended":47,
                      "Divine":46,"Supreme":9,"Celestial":3,"God":1},
          "rarityRange":"session",
