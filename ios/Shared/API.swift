@@ -56,10 +56,16 @@ final class HubAPI {
 
     /// A character picture; public, no session needed.
     static func imageURL(game: String, name: String) -> URL? {
-        let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))
+        guard let path = imagePath(game: game, name: name) else { return nil }
+        return URL(string: path, relativeTo: base)?.absoluteURL
+    }
+
+    /// The picture's path, percent-encoded (URL.path would decode it again).
+    static func imagePath(game: String, name: String) -> String? {
+        let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/?#"))
         guard let g = game.addingPercentEncoding(withAllowedCharacters: allowed),
               let n = name.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
-        return URL(string: "/api/img/\(g)/\(n)", relativeTo: base)?.absoluteURL
+        return "/api/img/\(g)/\(n)"
     }
 
     private func request(_ path: String, method: String, body: JSONValue?) -> URLRequest {
@@ -187,6 +193,19 @@ final class HubAPI {
     func remove(agent: String) async throws {
         let id = agent.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? agent
         try await delete("/api/agent/\(id)")
+    }
+
+    /// A character's own picture, for the ones the wiki has none of
+    /// (admins only on the server). `png` is the finished square image.
+    func uploadPicture(game: String, name: String, png: Data) async throws {
+        guard let path = HubAPI.imagePath(game: game, name: name) else { throw APIError.server("Ungültiger Name") }
+        try await post(path, .object(["data": .string("data:image/png;base64," + png.base64EncodedString())]))
+    }
+
+    /// Back to the wiki's picture, or none.
+    func removePicture(game: String, name: String) async throws {
+        guard let path = HubAPI.imagePath(game: game, name: name) else { return }
+        try await delete(path)
     }
 
     func me() async throws -> String {

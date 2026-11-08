@@ -134,6 +134,11 @@ check(Inventory(Demo.answer("/api/inventory")).rows.count == 2, "demo inventory"
 check(Schema(Demo.answer("/api/game/x/schema")["schema"])?.tabs.count == 4, "demo schema")
 check(parseHistory(Demo.answer("/api/history?metric=cash")).count == 48, "demo history")
 
+check(HubAPI.imagePath(game: "Fish an Anime RNG", name: "Mari Kita II") == "/api/img/Fish%20an%20Anime%20RNG/Mari%20Kita%20II",
+      "picture path got \(String(describing: HubAPI.imagePath(game: "Fish an Anime RNG", name: "Mari Kita II")))")
+check(HubAPI.imageURL(game: "Fish an Anime RNG", name: "Kafka")?.absoluteString == "https://taubey.com/api/img/Fish%20an%20Anime%20RNG/Kafka",
+      "picture url")
+
 check(HubAPI.accountQuery("") == "", "no account, no filter")
 check(HubAPI.accountQuery("Taubey yyy") == "&account=Taubey%20yyy", "account encoded got \(HubAPI.accountQuery("Taubey yyy"))")
 

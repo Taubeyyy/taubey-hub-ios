@@ -7,6 +7,9 @@ struct InventoryView: View {
     @State private var account = ""
     @State private var search = ""
     @State private var sort = "rarity"
+    @State private var editing: Item?
+    /// bumped after a picture changed, so every row asks again
+    @State private var pictures = 0
 
     var body: some View {
         NavigationStack {
@@ -22,7 +25,9 @@ struct InventoryView: View {
                     } else {
                         Section {
                             ForEach(items) { item in
-                                ItemRow(item: item, game: game).rowSurface()
+                                Button { editing = item } label: { ItemRow(item: item, game: game, bust: pictures) }
+                                    .buttonStyle(.plain)
+                                    .rowSurface()
                             }
                         } header: {
                             Text("\(items.count) Sorten · \(Format.number(Double(items.reduce(0) { $0 + $1.count }))) Stück")
@@ -40,6 +45,9 @@ struct InventoryView: View {
             .refreshable { await load() }
             .navigationTitle("Inventar")
             .task { await load() }
+            .sheet(item: $editing) { item in
+                PictureSheet(item: item, game: game) { pictures += 1 }
+            }
         }
     }
 
@@ -111,12 +119,18 @@ struct InventoryView: View {
 }
 
 struct ItemRow: View {
+    private var pictureURL: URL? {
+        guard let url = HubAPI.imageURL(game: game, name: item.name) else { return nil }
+        return bust == 0 ? url : URL(string: url.absoluteString + "?v=\(bust)")
+    }
+
     let item: Item
     let game: String
+    var bust: Int = 0
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: HubAPI.imageURL(game: game, name: item.name)) { phase in
+            AsyncImage(url: pictureURL) { phase in
                 if let image = phase.image {
                     image.resizable().scaledToFill()
                 } else {
