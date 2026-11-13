@@ -132,11 +132,8 @@ private struct StandRow: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(stand.has ? Theme.text : Theme.faint)
                     .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(stand.label)
-                    if stand.has { Text("· \(stand.rarity) · Lv \(stand.level)") }
-                }
-                .font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(1)
+                Text(stand.label + (stand.has ? " · \(stand.rarity) · Lv \(stand.level)" : ""))
+                    .font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(1)
             }
             Spacer(minLength: 8)
             if stand.held { Image(systemName: "hand.raised.fill").foregroundColor(Theme.warn).font(.system(size: 13)) }
@@ -242,7 +239,8 @@ private struct StandSheet: View {
                 if !stand.locked {
                     Section {
                         NavigationLink {
-                            SparePicker(spare: spare, title: stand.has ? "Wer kommt auf \(stand.label)?" : "Wer kommt drauf?") { char in
+                            SparePicker(spare: spare, title: stand.has ? "Wer kommt auf \(stand.label)?" : "Wer kommt drauf?",
+                                        close: { dismiss() }) { char in
                                 Task { await send("stand.swap", ["stand": .string(stand.id), "key": .string(char.id)]) }
                                 dismiss()
                             }
@@ -344,7 +342,7 @@ private struct JobSheet: View {
 
                 Section {
                     NavigationLink {
-                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?") { char in
+                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?", close: { dismiss() }) { char in
                             Task { await send("job.set", ["job": .string(job.id), "key": .string(char.id)]) }
                             dismiss()
                         }
@@ -390,6 +388,8 @@ private struct JobSheet: View {
 private struct SparePicker: View {
     let spare: [SpareChar]
     let title: String
+    /// closes the whole sheet, not just this list
+    let close: () -> Void
     let pick: (SpareChar) -> Void
     @State private var byPotential = false
 
@@ -430,5 +430,6 @@ private struct SparePicker: View {
         .screenBackground()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig") { close() } } }
     }
 }

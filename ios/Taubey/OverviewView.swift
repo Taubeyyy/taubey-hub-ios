@@ -150,6 +150,11 @@ struct OverviewView: View {
         }
     }
 
+    /// Hours for a day or less, weekdays for the week.
+    private var timeFormat: Date.FormatStyle {
+        hours > 24 ? .dateTime.weekday(.abbreviated) : .dateTime.hour()
+    }
+
     private var chart: some View {
         Card(title: "Verlauf", icon: "chart.xyaxis.line") {
             SegPicker(selection: $metric, options: [("cash", "Cash"), ("gems", "Gems"), ("catches", "Fänge")])
@@ -169,6 +174,9 @@ struct OverviewView: View {
                         .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round))
                         .interpolationMethod(.monotone)
                 }
+                // the axis ends a little above the highest point, not at the next
+                // round power of a thousand - otherwise the curve hugs the floor
+                .chartYScale(domain: 0...max(1, (points.map { $0.value }.max() ?? 1) * 1.15))
                 .chartYAxis {
                     AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
                         AxisGridLine().foregroundStyle(Theme.outline)
@@ -178,8 +186,9 @@ struct OverviewView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                        AxisValueLabel().foregroundStyle(Theme.faint)
+                    AxisMarks(values: .automatic(desiredCount: 3)) { _ in
+                        AxisValueLabel(format: timeFormat)
+                            .foregroundStyle(Theme.faint)
                     }
                 }
                 .frame(height: 170)

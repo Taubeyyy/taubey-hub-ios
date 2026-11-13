@@ -281,7 +281,7 @@ struct InstanceDetailView: View {
 
     private var stats: some View {
         Card(title: "Was das Script meldet", icon: "text.alignleft") {
-            let lines = agent.statLines
+            let lines = agent.statLines + (agent.metrics["rod"]?.string.map { [("Rod", $0)] } ?? [])
             if lines.isEmpty {
                 Text("Noch nichts gemeldet.").font(.system(size: 14)).foregroundColor(Theme.muted)
             } else {
@@ -294,13 +294,6 @@ struct InstanceDetailView: View {
                                 .multilineTextAlignment(.trailing)
                         }
                     }
-                }
-            }
-            if let rod = agent.metrics["rod"]?.string {
-                HStack {
-                    Text("Rute").font(.system(size: 14)).foregroundColor(Theme.muted)
-                    Spacer()
-                    Text(rod).font(.system(size: 14, weight: .medium)).foregroundColor(Theme.text)
                 }
             }
         }
