@@ -8,6 +8,8 @@ struct LoginView: View {
     @State private var busy = false
     @State private var problem: String?
     @FocusState private var focused: Bool
+    @State private var glow = false
+    @State private var wrong: CGFloat = 0
 
     var body: some View {
         ScrollView {
@@ -18,7 +20,10 @@ struct LoginView: View {
                         .frame(width: 76, height: 76)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.white.opacity(0.12), lineWidth: 1))
-                        .shadow(color: Theme.accent.opacity(0.55), radius: 24, y: 8)
+                        .shadow(color: Theme.accent.opacity(glow ? 0.75 : 0.35), radius: glow ? 30 : 18, y: 8)
+                        .scaleEffect(glow ? 1.03 : 1)
+                        .animation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true), value: glow)
+                        .onAppear { glow = true }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("TAUBEY")
                             .font(.system(size: 34, weight: .heavy, design: .rounded))
@@ -30,6 +35,7 @@ struct LoginView: View {
                     }
                 }
                 .padding(.top, 36)
+                .appear(0)
 
                 Card(title: "So meldest du dich an", icon: "key.fill") {
                     VStack(alignment: .leading, spacing: 10) {
@@ -38,6 +44,7 @@ struct LoginView: View {
                         step(3, "Den Code hier eingeben. Er gilt zehn Minuten, die Anmeldung danach 90 Tage.")
                     }
                 }
+                .appear(1)
 
                 VStack(alignment: .leading, spacing: 10) {
                     TextField("", text: $code, prompt: Text("CODE").foregroundColor(Theme.muted.opacity(0.6)))
@@ -51,6 +58,7 @@ struct LoginView: View {
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(focused ? Theme.accent : Theme.outline, lineWidth: 1.5))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .onSubmit { Task { await submit() } }
+                        .modifier(Shake(animatableData: wrong))
 
                     if let problem = problem { ErrorBanner(text: problem) }
 
@@ -66,9 +74,13 @@ struct LoginView: View {
                         .background(cleanCode.count >= 4 ? Theme.accent : Theme.accent.opacity(0.35))
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .shadow(color: Theme.accent.opacity(cleanCode.count >= 4 ? 0.45 : 0), radius: 16, y: 6)
+                        .animation(Motion.snap, value: cleanCode.count >= 4)
                     }
+                    .buttonStyle(PressStyle())
                     .disabled(busy || cleanCode.count < 4)
                 }
+                .appear(2)
             }
             .padding(20)
         }
@@ -96,8 +108,11 @@ struct LoginView: View {
         problem = nil
         do {
             try await store.signIn(code: cleanCode)
+            Haptics.success()
         } catch {
             problem = error.localizedDescription
+            Haptics.failure()
+            withAnimation(.easeOut(duration: 0.45)) { wrong += 1 }
         }
         busy = false
     }

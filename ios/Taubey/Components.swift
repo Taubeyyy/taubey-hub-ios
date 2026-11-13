@@ -39,6 +39,7 @@ struct Avatar: View {
     let name: String
     var size: CGFloat = 36
     var online: Bool? = nil
+    @State private var pulse = false
 
     private var tint: Color {
         let sum = name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
@@ -59,7 +60,14 @@ struct Avatar: View {
                         .fill(online ? Theme.good : Theme.faint)
                         .frame(width: size * 0.3, height: size * 0.3)
                         .overlay(Circle().stroke(Theme.ink, lineWidth: 2))
+                        .background(
+                            Circle()
+                                .stroke(Theme.good.opacity(online && !pulse ? 0.7 : 0), lineWidth: 2)
+                                .scaleEffect(pulse ? 2.1 : 1)
+                                .animation(online ? .easeOut(duration: 1.8).repeatForever(autoreverses: false) : .default, value: pulse)
+                        )
                         .offset(x: 2, y: 2)
+                        .onAppear { pulse = true }
                 }
             }
     }
@@ -71,6 +79,7 @@ struct AccountChips: View {
     @Binding var selection: String
     let accounts: [String]
     var online: (String) -> Bool = { _ in false }
+    @Namespace private var pill
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -87,7 +96,7 @@ struct AccountChips: View {
         return Button {
             guard selection != value else { return }
             Haptics.tap()
-            withAnimation(.easeOut(duration: 0.18)) { selection = value }
+            withAnimation(Motion.snap) { selection = value }
         } label: {
             HStack(spacing: 7) {
                 if let dot = dot { StatusDot(online: dot) }
@@ -95,11 +104,39 @@ struct AccountChips: View {
             }
             .foregroundColor(on ? Color(hex: 0x09090B) : Theme.text)
             .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(on ? Theme.text : Color.white.opacity(0.05))
+            .background {
+                ZStack {
+                    Capsule().fill(Color.white.opacity(0.05))
+                    if on { Capsule().fill(Theme.text).matchedGeometryEffect(id: "pill", in: pill) }
+                }
+            }
             .overlay(Capsule().stroke(on ? Color.clear : Theme.line2, lineWidth: 1))
-            .clipShape(Capsule())
+            .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle(scale: 0.95))
+    }
+}
+
+/// Small figures side by side with hairlines between - the row under a big
+/// number on the overview and on an instance.
+struct FigureRow: View {
+    let items: [(String, String)]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(items.indices, id: \.self) { i in
+                if i > 0 { Rectangle().fill(Theme.line2).frame(width: 1, height: 30).padding(.horizontal, 12) }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(items[i].0.uppercased()).font(.system(size: 9.5, weight: .bold)).kerning(0.8).foregroundColor(Theme.faint)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(items[i].1).font(.system(size: 19, weight: .heavy, design: .rounded)).foregroundColor(Theme.text)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .contentTransition(.numericText())
+                        .animation(.easeOut(duration: 0.4), value: items[i].1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 }
 

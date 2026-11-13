@@ -16,6 +16,9 @@ struct EventsView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
 
                 if let error = store.error { ErrorBanner(text: error).listRowBackground(Color.clear) }
+                if !loaded {
+                    Section { ForEach(0..<5, id: \.self) { _ in SkeletonRow().rowSurface() } }
+                }
                 if loaded && events.isEmpty {
                     EmptyHint(icon: "bell.slash", title: "Keine Events", text: "Hier landen gute Fänge, Rejoins und Probleme.")
                         .listRowBackground(Color.clear)

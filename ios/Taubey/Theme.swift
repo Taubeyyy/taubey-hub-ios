@@ -209,21 +209,29 @@ struct Chip: View {
 struct SegPicker<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
+    /// the white pill is one shape that slides from choice to choice
+    @Namespace private var pill
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(options.indices, id: \.self) { i in
                 let on = options[i].0 == selection
                 Button {
-                    withAnimation(.easeOut(duration: 0.18)) { selection = options[i].0 }
+                    guard !on else { return }
+                    Haptics.tap()
+                    withAnimation(Motion.snap) { selection = options[i].0 }
                 } label: {
                     Text(options[i].1)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundColor(on ? Color(hex: 0x09090B) : Theme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
-                        .background(on ? Theme.text : Color.clear)
-                        .clipShape(Capsule())
+                        .background {
+                            if on { Capsule().fill(Theme.text).matchedGeometryEffect(id: "pill", in: pill) }
+                        }
+                        .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -301,6 +309,6 @@ struct AccentButtonStyle: ButtonStyle {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .shadow(color: Theme.accent.opacity(configuration.isPressed ? 0.2 : 0.45), radius: 16, y: 6)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(Motion.snap, value: configuration.isPressed)
     }
 }

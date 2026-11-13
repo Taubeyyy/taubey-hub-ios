@@ -8,6 +8,8 @@ struct OverviewView: View {
     @State private var hours = 6
     @State private var points: [HistoryPoint] = []
     @State private var allRarities = false
+    /// the point under the finger while it rests on the chart
+    @State private var picked: HistoryPoint?
 
     private let ranges: [(String, String)] = [("session", "Session"), ("today", "Heute"), ("7d", "7 Tage"), ("all", "Alles")]
 
@@ -22,13 +24,15 @@ struct OverviewView: View {
                     }
                     if let error = store.error { ErrorBanner(text: error) }
                     if let o = store.shown {
-                        hero(o)
-                        if let next = o.nextRebirth { rebirth(next) }
-                        chart
-                        rarities(o)
-                        events(o)
+                        hero(o).appear(0)
+                        if let next = o.nextRebirth { rebirth(next).appear(1) }
+                        chart.appear(2)
+                        rarities(o).appear(3)
+                        events(o).appear(4)
                     } else {
-                        ProgressView().padding(60)
+                        Skeleton(height: 210, radius: 18)
+                        Skeleton(height: 120)
+                        Skeleton(height: 280)
                     }
                 }
                 .padding(16)
@@ -85,17 +89,11 @@ struct OverviewView: View {
                 .font(.system(size: 13)).foregroundColor(Theme.muted)
                 .lineLimit(1).minimumScaleFactor(0.8)
             Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
-            HStack(spacing: 0) {
-                figure("Fänge / min", Format.number(o.catchesPerMin))
-                separator
-                figure("Gems / min", Format.number(o.gemsPerMin))
-                separator
-                if store.account.isEmpty {
-                    figure("Fänge", Format.number(o.catches))
-                } else {
-                    figure("Rebirths", Format.number(o.rebirths))
-                }
-            }
+            FigureRow(items: [
+                ("Fänge / min", Format.number(o.catchesPerMin)),
+                ("Gems / min", Format.number(o.gemsPerMin)),
+                store.account.isEmpty ? ("Fänge", Format.number(o.catches)) : ("Rebirths", Format.number(o.rebirths)),
+            ])
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -103,20 +101,6 @@ struct OverviewView: View {
             RadialGradient(colors: [Theme.accent.opacity(0.28), .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
         )
         .cardSurface(radius: 18)
-    }
-
-    private func figure(_ caption: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(caption.uppercased()).font(.system(size: 9.5, weight: .bold)).kerning(0.8).foregroundColor(Theme.faint)
-                .lineLimit(1).minimumScaleFactor(0.8)
-            Text(value).font(.system(size: 19, weight: .heavy, design: .rounded)).foregroundColor(Theme.text)
-                .lineLimit(1).minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var separator: some View {
-        Rectangle().fill(Theme.line2).frame(width: 1, height: 30).padding(.horizontal, 12)
     }
 
     // MARK: sections
@@ -136,16 +120,9 @@ struct OverviewView: View {
                 }
             }
             if next.cost > 0 {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(0.06))
-                        Capsule()
-                            .fill(LinearGradient(colors: [Theme.accent, Color(hex: 0xB49CFF)], startPoint: .leading, endPoint: .trailing))
-                            .frame(width: max(6, geo.size.width * CGFloat(max(0, min(1, 1 - next.short / next.cost)))))
-                            .shadow(color: Theme.accent.opacity(0.5), radius: 6)
-                    }
-                }
-                .frame(height: 6)
+                FillBar(fraction: CGFloat(1 - next.short / next.cost),
+                        fill: LinearGradient(colors: [Theme.accent, Color(hex: 0xB49CFF)], startPoint: .leading, endPoint: .trailing),
+                        glow: Theme.accent)
             }
         }
     }
@@ -173,6 +150,36 @@ struct OverviewView: View {
                         .foregroundStyle(Theme.accent)
                         .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round))
                         .interpolationMethod(.monotone)
+                    if let picked = picked, picked.id == p.id {
+                        RuleMark(x: .value("Zeit", picked.date))
+                            .foregroundStyle(Theme.line2)
+                            .lineStyle(StrokeStyle(lineWidth: 1))
+                        PointMark(x: .value("Zeit", picked.date), y: .value("pro Stunde", picked.value))
+                            .foregroundStyle(Theme.text)
+                            .symbolSize(70)
+                    }
+                }
+                // a finger resting on the chart reads off the point under it
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Rectangle().fill(Color.clear).contentShape(Rectangle())
+                            // a short hold first, so a swipe over the chart still scrolls the page
+                            .gesture(
+                                LongPressGesture(minimumDuration: 0.18)
+                                    .sequenced(before: DragGesture(minimumDistance: 0))
+                                    .onChanged { value in
+                                        guard case .second(true, let drag?) = value else { return }
+                                        let x = drag.location.x - geo[proxy.plotAreaFrame].origin.x
+                                        guard let date: Date = proxy.value(atX: x) else { return }
+                                        let near = points.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
+                                        if near?.id != picked?.id {
+                                            Haptics.tap()
+                                            picked = near
+                                        }
+                                    }
+                                    .onEnded { _ in withAnimation(.easeOut(duration: 0.25)) { picked = nil } }
+                            )
+                    }
                 }
                 // the axis ends a little above the highest point, not at the next
                 // round power of a thousand - otherwise the curve hugs the floor
@@ -195,8 +202,13 @@ struct OverviewView: View {
             }
 
             HStack {
-                Text(store.account.isEmpty ? "pro Stunde, alle zusammen" : "pro Stunde")
-                    .font(.system(size: 12)).foregroundColor(Theme.faint)
+                if let picked = picked {
+                    Text("\(Format.number(picked.value)) · \(picked.date.formatted(date: .omitted, time: .shortened))")
+                        .font(.system(size: 12.5, weight: .semibold)).foregroundColor(Theme.text)
+                } else {
+                    Text(store.account.isEmpty ? "pro Stunde, alle zusammen" : "pro Stunde")
+                        .font(.system(size: 12)).foregroundColor(Theme.faint)
+                }
                 Spacer()
                 SegPicker(selection: $hours, options: [(6, "6 h"), (24, "24 h"), (168, "7 T")]).frame(width: 170)
             }
@@ -219,16 +231,8 @@ struct OverviewView: View {
                     ForEach(list) { row in
                         HStack(spacing: 10) {
                             RarityText(name: row.name, size: 13.5).frame(width: 104, alignment: .leading)
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(Color.white.opacity(0.04))
-                                    Capsule()
-                                        .fill(Theme.gradient(rarity: row.name))
-                                        .frame(width: max(8, geo.size.width * CGFloat(log10(row.count + 1) / max(0.3, top))))
-                                        .shadow(color: Theme.color(rarity: row.name).opacity(0.45), radius: 4)
-                                }
-                            }
-                            .frame(height: 6)
+                            FillBar(fraction: CGFloat(log10(row.count + 1) / max(0.3, top)),
+                                    fill: Theme.gradient(rarity: row.name), glow: Theme.color(rarity: row.name))
                             Text(Format.number(row.count))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundColor(Theme.text)
@@ -239,7 +243,7 @@ struct OverviewView: View {
                 if all.count > 6 {
                     Button {
                         Haptics.tap()
-                        withAnimation(.easeOut(duration: 0.2)) { allRarities.toggle() }
+                        withAnimation(Motion.settle) { allRarities.toggle() }
                     } label: {
                         HStack(spacing: 5) {
                             Text(allRarities ? "Weniger" : "Alle \(all.count) Seltenheiten")
@@ -249,7 +253,7 @@ struct OverviewView: View {
                         .foregroundColor(Theme.accent)
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressStyle())
                 }
             }
         }
@@ -275,7 +279,7 @@ struct OverviewView: View {
                     .foregroundColor(Theme.accent)
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressStyle())
             }
         }
     }

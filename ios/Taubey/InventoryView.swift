@@ -42,7 +42,7 @@ struct InventoryView: View {
                     case .items: items(inv)
                     }
                 } else {
-                    ProgressView().frame(maxWidth: .infinity).padding(40).listRowBackground(Color.clear)
+                    Section { ForEach(0..<7, id: \.self) { _ in SkeletonRow().rowSurface() } }
                 }
             }
             .listStyle(.insetGrouped)
@@ -129,7 +129,7 @@ struct InventoryView: View {
             Section {
                 ForEach(list) { item in
                     Button { editing = item } label: { ItemRow(item: item, game: game, bust: pictures) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressStyle(scale: 0.985))
                         .rowSurface()
                 }
             } header: {
@@ -163,7 +163,7 @@ struct InventoryView: View {
                     Button { editing = entry.item } label: {
                         ItemRow(item: entry.item, game: game, bust: pictures, note: Format.ago(entry.at))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressStyle(scale: 0.985))
                     .rowSurface()
                 }
             } header: {

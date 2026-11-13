@@ -143,9 +143,51 @@ struct InstanceDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                header
-                actions
-                stats
+                header.appear(0)
+                actions.appear(1)
+                plotCard.appear(2)
+                stats.appear(3)
+                settingsCard.appear(4)
+                Button(role: .destructive) { confirmRemove = true } label: {
+                    Text("Instanz aus dem Dashboard entfernen")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .foregroundColor(Theme.bad)
+                .buttonStyle(PressStyle())
+            }
+            .padding(16)
+        }
+        .screenBackground()
+        .navigationTitle(agent.account)
+        .navigationBarTitleDisplayMode(.inline)
+        .refreshable {
+            await store.refresh()
+            plot = (try? await store.api.plot(agent: agentId)) ?? plot
+        }
+        .task { plot = try? await store.api.plot(agent: agentId) }
+        .confirmationDialog("Eigene Einstellungen dieser Instanz verwerfen?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Zurücksetzen", role: .destructive) {
+                Task {
+                    if await store.call({ try await store.api.reset(agent: agentId) }) != nil { store.say("✓ Folgt wieder dem Standard") }
+                }
+            }
+        }
+        .confirmationDialog("Instanz entfernen? Sie taucht wieder auf, sobald das Script sich meldet.", isPresented: $confirmRemove,
+                            titleVisibility: .visible) {
+            Button("Entfernen", role: .destructive) {
+                Task {
+                    if await store.call({ try await store.api.remove(agent: agentId) }) != nil {
+                        await store.refresh()
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private var plotCard: some View {
                 Card(title: "Stände & Jobs", icon: "square.grid.3x3") {
                     NavigationLink {
                         PlotView(agent: agent)
@@ -169,8 +211,12 @@ struct InstanceDetailView: View {
                         .padding(.vertical, 2)
                         .contentShape(Rectangle())
                     }
+                    .buttonStyle(PressStyle())
                     .accessibilityIdentifier("plotLink")
                 }
+    }
+
+    private var settingsCard: some View {
                 Card(title: "Einstellungen", icon: "slider.horizontal.3") {
                     NavigationLink {
                         SettingsEditor(agent: agent)
@@ -182,66 +228,56 @@ struct InstanceDetailView: View {
                         row("Auf Spiel-Standard zurücksetzen", icon: "arrow.uturn.backward", detail: nil)
                     }
                 }
-                Button(role: .destructive) { confirmRemove = true } label: {
-                    Text("Instanz aus dem Dashboard entfernen")
-                        .font(.system(size: 15, weight: .medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .foregroundColor(Theme.bad)
-            }
-            .padding(16)
-        }
-        .screenBackground()
-        .navigationTitle(agent.account)
-        .navigationBarTitleDisplayMode(.inline)
-        .refreshable {
-            await store.refresh()
-            plot = (try? await store.api.plot(agent: agentId)) ?? plot
-        }
-        .task { plot = try? await store.api.plot(agent: agentId) }
-        .confirmationDialog("Eigene Einstellungen dieser Instanz verwerfen?", isPresented: $confirmReset, titleVisibility: .visible) {
-            Button("Zurücksetzen", role: .destructive) {
-                Task {
-                    if await store.call({ try await store.api.reset(agent: agentId) }) != nil { store.say("Folgt wieder dem Standard") }
-                }
-            }
-        }
-        .confirmationDialog("Instanz entfernen? Sie taucht wieder auf, sobald das Script sich meldet.", isPresented: $confirmRemove,
-                            titleVisibility: .visible) {
-            Button("Entfernen", role: .destructive) {
-                Task {
-                    if await store.call({ try await store.api.remove(agent: agentId) }) != nil {
-                        await store.refresh()
-                        dismiss()
-                    }
-                }
-            }
-        }
     }
 
+    private var status: String {
+        agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline"
+    }
+
+    /// Who, what it is doing, and what it earns - the same shape as the
+    /// overview's top card.
     private var header: some View {
-        Card {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Avatar(name: agent.account, size: 44, online: agent.online)
+                Avatar(name: agent.account, size: 46, online: agent.online)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(agent.game).font(.system(size: 13)).foregroundColor(Theme.muted)
-                    Text(agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline")
-                        .font(.system(size: 17, weight: .semibold)).foregroundColor(Theme.text)
+                    Text(agent.game).font(.system(size: 12.5)).foregroundColor(Theme.muted).lineLimit(1)
+                    Text(status)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(agent.online ? Theme.text : Theme.faint)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                        .id(status)
+                        .transition(.opacity)
                 }
-                Spacer()
+                .animation(.easeOut(duration: 0.25), value: status)
+                Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("läuft seit").font(.system(size: 12)).foregroundColor(Theme.muted)
-                    Text(Format.duration(Double(agent.uptime ?? 0))).font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text)
+                    Text("läuft seit").font(.system(size: 11.5)).foregroundColor(Theme.faint)
+                    Text(Format.duration(Double(agent.uptime ?? 0)))
+                        .font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundColor(Theme.text)
                 }
             }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                Tile(caption: "Cash / s", value: Format.number(agent.metric("cashPerSec")), icon: "dollarsign.circle")
-                Tile(caption: "Fänge / min", value: Format.number(agent.metric("catchesPerMin")), icon: "fish")
-                Tile(caption: "Cash", value: Format.number(agent.metric("cash")), icon: "banknote")
-                Tile(caption: "Rebirths", value: Format.number(agent.metric("rebirths")), icon: "arrow.triangle.2.circlepath")
-            }
+            Text("CASH PRO SEKUNDE").font(.system(size: 10.5, weight: .bold)).kerning(1).foregroundColor(Theme.faint)
+                .padding(.top, 20)
+            Text(Format.number(agent.metric("cashPerSec")))
+                .font(.system(size: 42, weight: .heavy, design: .rounded))
+                .kerning(-1)
+                .foregroundColor(Theme.text)
+                .lineLimit(1).minimumScaleFactor(0.5)
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.4), value: agent.metric("cashPerSec"))
+                .padding(.top, 6)
+            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
+            FigureRow(items: [
+                ("Fänge / min", Format.number(agent.metric("catchesPerMin"))),
+                ("Cash", Format.number(agent.metric("cash"))),
+                ("Rebirths", Format.number(agent.metric("rebirths"))),
+            ])
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RadialGradient(colors: [Theme.accent.opacity(0.26), .clear], center: .topTrailing, startRadius: 0, endRadius: 260))
+        .cardSurface(radius: 18)
     }
 
     private var actions: some View {
@@ -264,11 +300,12 @@ struct InstanceDetailView: View {
 
     private func action(_ title: String, icon: String, tint: Color, _ work: @escaping () async -> Void) -> some View {
         Button {
+            Haptics.tap()
             Task { await work() }
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: icon).font(.system(size: 18, weight: .semibold))
-                Text(title).font(.system(size: 12, weight: .medium))
+                Text(title).font(.system(size: 12, weight: .medium)).lineLimit(1).minimumScaleFactor(0.8)
             }
             .foregroundColor(tint)
             .frame(maxWidth: .infinity)
@@ -276,7 +313,7 @@ struct InstanceDetailView: View {
             .background(tint.opacity(0.07))
             .cardSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle(scale: 0.93))
     }
 
     private var stats: some View {

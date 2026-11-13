@@ -21,17 +21,19 @@ struct PlotView: View {
         ScrollView {
             VStack(spacing: 14) {
                 if let r = report {
-                    summary(r)
+                    summary(r).appear(0)
                     SegPicker(selection: $page, options: [(.stands, "Stände · \(r.stands.count)"), (.jobs, "Jobs · \(r.jobs.count)")])
                     switch page {
-                    case .stands: stands(r)
-                    case .jobs: jobs(r)
+                    case .stands: stands(r).appear(1)
+                    case .jobs: jobs(r).appear(1)
                     }
                 } else if loaded {
                     EmptyHint(icon: "square.grid.3x3", title: "Noch kein Bericht",
                               text: agent.online ? "Das Script schickt ihn spätestens in 30 Sekunden." : "Die Instanz ist offline.")
                 } else {
-                    ProgressView().padding(40)
+                    HStack(spacing: 10) { Skeleton(height: 84); Skeleton(height: 84); Skeleton(height: 84) }
+                    Skeleton(height: 36, radius: 18)
+                    Skeleton(height: 320)
                 }
             }
             .padding(16)
@@ -50,11 +52,14 @@ struct PlotView: View {
             StandSheet(stand: stand, spare: report?.spare ?? [], food: report?.food ?? 0, smart: report?.smart ?? true) { cmd, args in
                 await send(cmd, args)
             }
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $jobSheet) { job in
             JobSheet(job: job, spare: report?.spare ?? []) { cmd, args in
                 await send(cmd, args)
             }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -79,7 +84,7 @@ struct PlotView: View {
                     Haptics.tap()
                     standSheet = stand
                 } label: { StandRow(stand: stand) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressStyle(scale: 0.985))
                     .disabled(stand.locked && !stand.has)
                 if stand.id != list.last?.id { Divider().background(Theme.outline) }
             }
@@ -93,7 +98,7 @@ struct PlotView: View {
                 Button {
                     Haptics.tap()
                     jobSheet = job
-                } label: { JobRow(job: job) }.buttonStyle(.plain)
+                } label: { JobRow(job: job) }.buttonStyle(PressStyle(scale: 0.985))
                 if job.id != r.jobs.last?.id { Divider().background(Theme.outline) }
             }
         }
@@ -142,6 +147,8 @@ private struct StandRow: View {
                 Text(Format.number(stand.cps) + "/s")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(Theme.text)
+                    .contentTransition(.numericText())
+                    .animation(.easeOut(duration: 0.4), value: stand.cps)
             }
         }
         .padding(.vertical, 2)

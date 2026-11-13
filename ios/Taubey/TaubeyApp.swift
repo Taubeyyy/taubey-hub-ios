@@ -39,11 +39,12 @@ struct TaubeyApp: App {
         WindowGroup {
             Group {
                 if store.signedIn {
-                    RootView()
+                    RootView().transition(.opacity.combined(with: .scale(scale: 1.03)))
                 } else {
-                    LoginView()
+                    LoginView().transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.35), value: store.signedIn)
             .environmentObject(store)
             .environmentObject(notifier)
             .preferredColorScheme(.dark)
@@ -88,21 +89,15 @@ struct RootView: View {
             tab = wanted
             notifier.openTab = nil
         }
+        .onChange(of: tab) { _ in Haptics.tap() }
         .overlay(alignment: .top) {
             if let toast = store.toast {
-                Text(toast)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Theme.text)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(Theme.raised)
-                    .overlay(Capsule().stroke(Theme.accent.opacity(0.5), lineWidth: 1))
-                    .clipShape(Capsule())
-                    .padding(.top, 6)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                ToastView(text: toast)
+                    .id(toast)
+                    .transition(.move(edge: .top).combined(with: .opacity).combined(with: .scale(scale: 0.92, anchor: .top)))
             }
         }
-        .animation(.easeOut(duration: 0.2), value: store.toast)
+        .animation(Motion.snap, value: store.toast)
         // asks once; afterwards this only reads the answer - then the token
         // for real push, which iOS hands over again on every start
         .task {
