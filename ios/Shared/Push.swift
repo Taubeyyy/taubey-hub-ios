@@ -1,0 +1,55 @@
+import Foundation
+
+/// Real push through Apple (APNs) - the pure parts, so the CI checks them.
+///
+/// The server sends every alert it makes (a problem, an account going quiet
+/// or coming back, a good catch, the daily summary) to every iPhone that
+/// handed it a device token. That needs an Apple developer key on the server;
+/// until one is there - or if Apple refuses a TrollStore-signed app - the
+/// app keeps looking for news itself (Notifier.check).
+enum PushLogic {
+    /// APNs hands the token over as bytes; the server wants it as hex.
+    static func hex(_ token: Data) -> String {
+        token.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Which tab a push opens, by the `view` the server puts in it.
+    static func tab(for view: String) -> Int {
+        switch view {
+        case "accounts", "sessions": return 1
+        case "inventory": return 2
+        case "activity", "events": return 3
+        default: return 0
+        }
+    }
+
+    /// Whether the server's answer to /api/apns/device means pushes really
+    /// arrive: a key on the server, one push through, and no refusal since.
+    static func working(_ answer: JSONValue) -> Bool {
+        (answer["configured"].bool ?? false) && answer["lastOk"].string != nil && answer["lastError"].string == nil
+    }
+}
+
+/// What the server pushes about (GET /api/alerts), and whether it can.
+struct AlertSettings: Equatable {
+    var trouble = true
+    var silent = true
+    var back = true
+    var summary = true
+    var catches = ""
+    var appPush = false
+    var appDevices = 0
+
+    init() {}
+
+    init(_ j: JSONValue) {
+        let a = j["alerts"]
+        trouble = a["trouble"].bool ?? true
+        silent = a["silent"].bool ?? true
+        back = a["back"].bool ?? true
+        summary = a["summary"].bool ?? true
+        catches = a["catches"].string ?? ""
+        appPush = j["apns"]["available"].bool ?? false
+        appDevices = j["apns"]["devices"].int ?? 0
+    }
+}

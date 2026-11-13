@@ -2,10 +2,10 @@ import Foundation
 
 /// What deserves a notification. Pure functions, so the CI checks them.
 ///
-/// There is no server push under TrollStore (APNs needs a real Apple
-/// signature) - the same as Dopa. The app asks the server itself: every ten
-/// seconds while it is open, and whenever iOS hands it a background refresh.
-/// Whatever happened since the last look becomes a local notification.
+/// The fallback for while real push (Push.swift) is not working: the app
+/// asks the server itself - every ten seconds while it is open, and whenever
+/// iOS hands it a background refresh. Whatever happened since the last look
+/// becomes a local notification.
 enum AlertLogic {
     /// Event kinds the server writes: catch, trouble, server.
     static let kinds = ["catch", "trouble", "server"]

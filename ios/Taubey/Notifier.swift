@@ -2,8 +2,10 @@ import SwiftUI
 import UserNotifications
 import BackgroundTasks
 
-/// Local notifications for what happens on the farm - see AlertLogic for why
-/// there is no server push. Settings live in UserDefaults; the marker of the
+/// Notifications for what happens on the farm. Real push comes from the
+/// server through Apple (Push.swift); while that is not working, the app
+/// looks for news itself and posts local notifications - never both, so
+/// nothing arrives twice. Settings live in UserDefaults; the marker of the
 /// last event looked at too, so a restart does not announce old news.
 @MainActor
 final class Notifier: ObservableObject {
@@ -15,6 +17,14 @@ final class Notifier: ObservableObject {
     @AppStorage("notify.server") var server = false
     @AppStorage("notify.offline") var offline = true
     @Published var allowed: Bool?
+    /// Pushes from the server really arrive: then the app's own look-ups stay quiet.
+    @Published var pushActive = UserDefaults.standard.bool(forKey: "push.active") {
+        didSet { UserDefaults.standard.set(pushActive, forKey: "push.active") }
+    }
+    /// What there is to say about real push, for the settings.
+    @Published var pushNote = ""
+    /// A tapped notification asks for this tab.
+    @Published var openTab: Int?
 
     private let defaults = UserDefaults.standard
     private let sinceKey = "notify.since"
@@ -38,12 +48,59 @@ final class Notifier: ObservableObject {
         allowed = ok
     }
 
+    // MARK: real push
+
+    private var sampleRun: Bool { ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") } }
+
+    /// Asks iOS for the device token, on every start - it can change.
+    func registerForPush() {
+        guard !sampleRun else { return }
+        UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    /// iOS handed over a token: the server keeps it and says whether pushes go through.
+    func registered(token: Data) async {
+        guard let session = Vault.read() else { return }
+        do {
+            let answer = try await HubAPI(session: session).post("/api/apns/device", .object([
+                "token": .string(PushLogic.hex(token)),
+                "env": .string("production"),
+                "name": .string(UIDevice.current.name),
+            ]))
+            pushActive = PushLogic.working(answer)
+            if !(answer["configured"].bool ?? false) {
+                pushNote = "iOS hat ein Push-Token gegeben – dem Server fehlt noch der Apple-Schlüssel."
+            } else if let refused = answer["lastError"].string {
+                pushNote = "Apple hat den letzten Push abgelehnt: \(refused)"
+            } else if answer["lastOk"].string == nil {
+                pushNote = "Bereit – schick einen Test-Push, um es zu prüfen."
+            } else {
+                pushNote = "Kommt vom Server über Apple, auch wenn die App zu ist."
+            }
+        } catch {
+            pushNote = "Das Token kam nicht beim Server an: \(error.localizedDescription)"
+        }
+    }
+
+    func pushFailed(_ why: String) {
+        pushActive = false
+        pushNote = "iOS gibt kein Push-Token: \(why)"
+    }
+
+    /// A test push went through.
+    func confirmPush() {
+        pushActive = true
+        pushNote = "Kommt vom Server über Apple, auch wenn die App zu ist."
+    }
+
     /// One look: new events since the last one, and instances that dropped
     /// off. The first look ever only sets the markers.
     func check(events: [HubEvent], agents: [Agent]?) {
         let first = defaults.object(forKey: sinceKey) == nil
         let since = Date(timeIntervalSince1970: defaults.double(forKey: sinceKey))
-        if !first {
+        // with real push the server has said it already; the markers still move
+        let quiet = first || pushActive
+        if !quiet {
             for e in AlertLogic.fresh(events, since: since, kinds: kinds) {
                 let t = AlertLogic.text(for: e)
                 post(id: "ev-\(e.id)", title: t.title, body: t.body, urgent: e.kind == "trouble")
@@ -54,7 +111,7 @@ final class Notifier: ObservableObject {
 
         if let agents = agents {
             let previous = Set(defaults.stringArray(forKey: onlineKey) ?? [])
-            if offline && !first {
+            if offline && !quiet {
                 for a in AlertLogic.wentOffline(previous: previous, agents: agents) {
                     post(id: "off-\(a.id)-\(Int(Date().timeIntervalSince1970))", title: "🔌 \(a.account) ist offline",
                          body: "\(a.game) meldet sich nicht mehr.", urgent: true)
@@ -98,6 +155,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Task { @MainActor in await Notifier.shared.registered(token: deviceToken) }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        let why = error.localizedDescription
+        Task { @MainActor in Notifier.shared.pushFailed(why) }
+    }
+
+    /// A tap on a notification opens the tab it is about.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let view = response.notification.request.content.userInfo["view"] as? String ?? ""
+        Task { @MainActor in Notifier.shared.openTab = PushLogic.tab(for: view) }
+        completionHandler()
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,

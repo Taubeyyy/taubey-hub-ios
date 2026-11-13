@@ -52,10 +52,23 @@ jobs:
             build 2>&1 | tee -a "$RUNNER_TEMP/build.log" | grep -E "error:|warning: .*Taubey|BUILD" || true
           test -d build/Build/Products/Release-iphoneos/Taubey.app
 
+      # Real push: Apple's push service only takes a token from an app of the
+      # team whose key the server signs with. With the repository variable
+      # APPLE_TEAM_ID set, the app is signed as that team's app; without it,
+      # as before (TrollStore), and the app falls back to looking itself.
       - name: Sign with ldid and pack the IPA
+        env:
+          TEAM: ${{ vars.APPLE_TEAM_ID }}
         run: |
           APP=build/Build/Products/Release-iphoneos/Taubey.app
-          ldid -STaubey/Taubey.entitlements -Icom.taubey.hub "$APP/Taubey"
+          ENT="$RUNNER_TEMP/Taubey.entitlements"
+          cp Taubey/Taubey.entitlements "$ENT"
+          if [ -n "$TEAM" ]; then
+            /usr/libexec/PlistBuddy -c "Set :application-identifier $TEAM.com.taubey.hub" \
+              -c "Set :com.apple.developer.team-identifier $TEAM" "$ENT"
+            echo "signed for team $TEAM"
+          fi
+          ldid -S"$ENT" -Icom.taubey.hub "$APP/Taubey"
           ldid -e "$APP/Taubey"
           mkdir -p out/Payload
           cp -R "$APP" out/Payload/

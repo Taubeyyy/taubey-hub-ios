@@ -16,6 +16,10 @@ enum Demo {
         if p.hasSuffix("/config") && p.hasPrefix("/api/game/") { return json("{\"ok\":true,\"config\":{\"AutoFish\":true,\"HubFpsCap\":60}}") }
         if p.hasPrefix("/api/agent/") { return json(agentConfig) }
         if p.hasPrefix("/api/auth/me") { return json("{\"ok\":true,\"name\":\"Taubey\"}") }
+        if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"apns\":1,\"apnsErrors\":[]}") }
+        if p.hasPrefix("/api/alerts") {
+            return json("{\"ok\":true,\"alerts\":{\"trouble\":true,\"silent\":true,\"back\":true,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":true,\"devices\":1}}")
+        }
         return json("{\"ok\":true,\"applied\":1,\"sent\":1}")
     }
 

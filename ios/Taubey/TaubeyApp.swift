@@ -60,20 +60,33 @@ struct TaubeyApp: App {
 
 struct RootView: View {
     @EnvironmentObject var store: HubStore
+    @EnvironmentObject var notifier: Notifier
     @Environment(\.scenePhase) private var phase
+    @State private var tab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             OverviewView()
                 .tabItem { Label("Übersicht", systemImage: "square.grid.2x2") }
+                .tag(0)
             InstancesView()
                 .tabItem { Label("Instanzen", systemImage: "desktopcomputer") }
+                .tag(1)
             InventoryView()
                 .tabItem { Label("Inventar", systemImage: "shippingbox") }
+                .tag(2)
             EventsView()
                 .tabItem { Label("Events", systemImage: "bell") }
+                .tag(3)
             AccountView()
                 .tabItem { Label("Konto", systemImage: "person.crop.circle") }
+                .tag(4)
+        }
+        // a tapped notification lands on the tab it is about
+        .onChange(of: notifier.openTab) { wanted in
+            guard let wanted = wanted else { return }
+            tab = wanted
+            notifier.openTab = nil
         }
         .overlay(alignment: .top) {
             if let toast = store.toast {
@@ -90,8 +103,12 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.toast)
-        // asks once; afterwards this only reads the answer
-        .task { await Notifier.shared.requestPermission() }
+        // asks once; afterwards this only reads the answer - then the token
+        // for real push, which iOS hands over again on every start
+        .task {
+            await Notifier.shared.requestPermission()
+            Notifier.shared.registerForPush()
+        }
         // every ten seconds while the app is open - the scripts report every
         // fifteen, so this never shows anything more than one beat old
         .task(id: phase) {

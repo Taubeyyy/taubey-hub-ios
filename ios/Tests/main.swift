@@ -142,5 +142,18 @@ check(HubAPI.imageURL(game: "Fish an Anime RNG", name: "Kafka")?.absoluteString 
 check(HubAPI.accountQuery("") == "", "no account, no filter")
 check(HubAPI.accountQuery("Taubey yyy") == "&account=Taubey%20yyy", "account encoded got \(HubAPI.accountQuery("Taubey yyy"))")
 
+// MARK: push
+check(PushLogic.hex(Data([0x00, 0xab, 0x10, 0xff])) == "00ab10ff", "token hex got \(PushLogic.hex(Data([0x00, 0xab, 0x10, 0xff])))")
+check(PushLogic.tab(for: "sessions") == 1 && PushLogic.tab(for: "accounts") == 1, "push opens the instances")
+check(PushLogic.tab(for: "overview") == 0 && PushLogic.tab(for: "") == 0, "push opens the overview")
+check(PushLogic.working(json("{\"ok\":true,\"configured\":true,\"lastOk\":\"2026-11-13 20:00:00\",\"lastError\":null}")), "push working")
+check(!PushLogic.working(json("{\"ok\":true,\"configured\":true,\"lastOk\":null,\"lastError\":null}")), "no push through yet")
+check(!PushLogic.working(json("{\"ok\":true,\"configured\":false,\"lastOk\":\"x\",\"lastError\":null}")), "no key on the server")
+check(!PushLogic.working(json("{\"ok\":true,\"configured\":true,\"lastOk\":\"x\",\"lastError\":\"400 BadDeviceToken\"}")), "refused since")
+let alertSettings = AlertSettings(json("{\"ok\":true,\"alerts\":{\"trouble\":false,\"silent\":true,\"back\":false,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":true,\"devices\":2}}"))
+check(!alertSettings.trouble && alertSettings.silent && !alertSettings.back && alertSettings.catches == "God", "alert settings read")
+check(alertSettings.appPush && alertSettings.appDevices == 2, "apns state read")
+check(AlertSettings(Demo.answer("/api/alerts")).appPush, "demo alerts")
+
 print("\(passed) passed, \(failures) failed")
 if failures > 0 { exit(1) }

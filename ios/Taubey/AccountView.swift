@@ -27,27 +27,7 @@ struct AccountView: View {
                 }
                 .rowSurface()
 
-                Section {
-                    if notifier.allowed == false {
-                        Button {
-                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                        } label: {
-                            Label("Mitteilungen sind aus – in den Einstellungen erlauben", systemImage: "bell.slash")
-                                .foregroundColor(Theme.warn)
-                        }
-                    }
-                    Toggle(isOn: $notifier.catches) { Label("Gute Fänge", systemImage: "sparkles") }
-                    Toggle(isOn: $notifier.trouble) { Label("Probleme", systemImage: "exclamationmark.triangle") }
-                    Toggle(isOn: $notifier.offline) { Label("Instanz geht offline", systemImage: "bolt.horizontal.circle") }
-                    Toggle(isOn: $notifier.server) { Label("Rejoins und Serverwechsel", systemImage: "arrow.triangle.2.circlepath") }
-                } header: {
-                    Text("Mitteilungen")
-                } footer: {
-                    Text("Welche Fänge zählen, stellst du im Web-Dashboard unter Alerts ein. Bei offener App kommen Mitteilungen sofort, sonst wenn iOS die App im Hintergrund kurz weckt – das entscheidet iOS, meist alle 15 Minuten bis paar Stunden.")
-                        .foregroundColor(Theme.faint)
-                }
-                .tint(Theme.accent)
-                .rowSurface()
+                PushSection()
 
                 if let o = store.overview, !o.groups.isEmpty, o.groups.contains(where: { !$0.name.isEmpty }) {
                     Section("Gruppen") {
