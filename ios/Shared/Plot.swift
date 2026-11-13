@@ -20,12 +20,22 @@ struct PlotReport {
     /// Seconds since the script sent it.
     let age: Int?
 
-    struct Items {
+    /// Everything that is not a character: boxes, potions, other items, materials.
+    struct Items: Hashable {
         var boxes: [ItemEntry] = []
         var potions: [ItemEntry] = []
         var other: [ItemEntry] = []
         var materials: [ItemEntry] = []
         var isEmpty: Bool { boxes.isEmpty && potions.isEmpty && other.isEmpty && materials.isEmpty }
+
+        init() {}
+
+        init(_ i: JSONValue) {
+            boxes = (i["boxes"].array ?? []).compactMap(ItemEntry.init)
+            potions = (i["potions"].array ?? []).compactMap(ItemEntry.init)
+            other = (i["items"].array ?? []).compactMap(ItemEntry.init)
+            materials = (i["materials"].array ?? []).compactMap(ItemEntry.init)
+        }
     }
 
     /// nil when the script has not sent one yet.
@@ -39,13 +49,7 @@ struct PlotReport {
         stands = (p["stands"].array ?? []).compactMap(PlotStand.init)
         jobs = (p["jobs"].array ?? []).compactMap(PlotJob.init)
         spare = (p["spare"].array ?? []).compactMap(SpareChar.init)
-        let i = p["items"]
-        items = Items(
-            boxes: (i["boxes"].array ?? []).compactMap(ItemEntry.init),
-            potions: (i["potions"].array ?? []).compactMap(ItemEntry.init),
-            other: (i["items"].array ?? []).compactMap(ItemEntry.init),
-            materials: (i["materials"].array ?? []).compactMap(ItemEntry.init)
-        )
+        items = Items(p["items"])
         placeNote = p["place"].string ?? ""
         smart = p["smart"].bool ?? true
         age = answer["age"].int
@@ -87,7 +91,13 @@ struct PlotStand: Identifiable, Equatable {
         costMax = j["max"].double
     }
 
-    /// "Purchases.5PAID" reads as "5 (paid)", "1" as "1".
+    /// The stand's number, for putting them in order: "Purchases.17" -> 17.
+    var number: Int {
+        let last = id.components(separatedBy: ".").last ?? id
+        return Int(last.filter { $0.isNumber }) ?? Int.max
+    }
+
+    /// "Purchases.5PAID" reads as "Stand 5 · bezahlt", "1" as "Stand 1".
     var label: String {
         var short = id.components(separatedBy: ".").last ?? id
         var paid = false
@@ -153,7 +163,7 @@ struct SpareChar: Identifiable, Equatable {
     var title: String { mutation.isEmpty ? name : "\(name) [\(mutation)]" }
 }
 
-struct ItemEntry: Identifiable, Equatable {
+struct ItemEntry: Identifiable, Hashable {
     let id: String
     let name: String
     let count: Double

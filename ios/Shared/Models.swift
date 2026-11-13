@@ -193,6 +193,10 @@ struct InventoryRow: Identifiable, Hashable {
     let age: Int?
     /// nil = this instance never reported a bag, which is not the same as empty
     let items: [Item]?
+    /// Kinds new in the last two days (name|mutation -> when they showed up).
+    let fresh: [String: Date]
+    /// Boxes, potions, other items, materials - from the plot report.
+    let things: PlotReport.Items?
 
     init?(_ j: JSONValue) {
         guard let id = j["id"].string else { return nil }
@@ -203,7 +207,20 @@ struct InventoryRow: Identifiable, Hashable {
         age = j["age"].int
         let acc = account
         items = j["items"].array.map { $0.compactMap { Item($0, account: acc) } }
+        var f: [String: Date] = [:]
+        for (key, value) in j["fresh"].object ?? [:] {
+            if let at = value.double, at > 0 { f[key] = Date(timeIntervalSince1970: at) }
+        }
+        fresh = f
+        things = j["things"].object != nil ? PlotReport.Items(j["things"]) : nil
     }
+}
+
+/// A kind of character that showed up recently, and when.
+struct FreshItem: Identifiable, Hashable {
+    let item: Item
+    let at: Date
+    var id: String { item.id }
 }
 
 struct Inventory {
@@ -236,6 +253,23 @@ struct Inventory {
     }
 
     func rank(_ rarity: String) -> Int { ladder.firstIndex(of: rarity) ?? -1 }
+
+    /// What is new in the picked game and account, newest first: kinds that
+    /// were not in the bag before (the server keeps when each first showed up).
+    func fresh(game: String, account: String) -> [FreshItem] {
+        var when: [String: Date] = [:]
+        for row in rows where row.game == game && (account.isEmpty || row.account == account) {
+            for (key, at) in row.fresh where when[key].map({ at > $0 }) ?? true { when[key] = at }
+        }
+        return merged(game: game, account: account)
+            .compactMap { item in when[item.id].map { FreshItem(item: item, at: $0) } }
+            .sorted { $0.at > $1.at }
+    }
+
+    /// The instances of the picked game and account that sent their items.
+    func things(game: String, account: String) -> [InventoryRow] {
+        rows.filter { $0.game == game && (account.isEmpty || $0.account == account) && $0.things != nil }
+    }
 }
 
 // MARK: - settings schema

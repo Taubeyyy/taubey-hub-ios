@@ -41,9 +41,9 @@ enum AlertLogic {
             let rarity = e.detail.isEmpty ? "" : "\(e.detail): "
             return ("🎣 \(rarity)\(e.title)", who)
         case "trouble":
-            return ("⚠️ \(e.title)", e.detail.isEmpty ? who : "\(who)\n\(e.detail)")
+            return ("⚠️ \(Lingo.event(e.title))", e.detail.isEmpty ? who : "\(who)\n\(Lingo.detail(e.detail))")
         default:
-            return (e.title, e.detail.isEmpty ? who : "\(who) · \(e.detail)")
+            return (Lingo.event(e.title), e.detail.isEmpty ? who : "\(who) · \(Lingo.detail(e.detail))")
         }
     }
 }

@@ -2,31 +2,30 @@ import SwiftUI
 
 /// "Stände & Jobs": one instance's plot, steered from the phone. Every action
 /// is a command the script runs with the same moves it makes on its own; the
-/// answer comes back on its next beat and shows as a toast.
+/// answer comes back on its next beat and shows as a toast. (Items live in
+/// the inventory.)
 @MainActor
 struct PlotView: View {
     @EnvironmentObject var store: HubStore
     let agent: Agent
 
-    enum Page: Hashable { case stands, jobs, items }
+    enum Page: Hashable { case stands, jobs }
 
     @State private var page: Page = .stands
     @State private var report: PlotReport?
     @State private var loaded = false
     @State private var standSheet: PlotStand?
     @State private var jobSheet: PlotJob?
-    @State private var busy = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                SegPicker(selection: $page, options: [(.stands, "Stände"), (.jobs, "Jobs"), (.items, "Items")])
                 if let r = report {
                     summary(r)
+                    SegPicker(selection: $page, options: [(.stands, "Stände · \(r.stands.count)"), (.jobs, "Jobs · \(r.jobs.count)")])
                     switch page {
                     case .stands: stands(r)
                     case .jobs: jobs(r)
-                    case .items: items(r)
                     }
                 } else if loaded {
                     EmptyHint(icon: "square.grid.3x3", title: "Noch kein Bericht",
@@ -70,17 +69,20 @@ struct PlotView: View {
     }
 
     private func stands(_ r: PlotReport) -> some View {
-        Card(title: "Stände", icon: "square.grid.3x3", trailing: r.age.map { "vor \(Format.duration(Double($0)))" }) {
+        let list = r.stands.sorted { $0.number == $1.number ? $0.id < $1.id : $0.number < $1.number }
+        return Card(title: "Stände", icon: "square.grid.3x3", trailing: r.age.map { "vor \(Format.duration(Double($0)))" }) {
             if !r.smart {
-                note("Das Script platziert mit „The game's Equip Best“ – das hält sich nicht an „In Ruhe lassen“.")
+                note("Das Script platziert gerade mit dem Equip Best des Spiels – das hält sich nicht an „In Ruhe lassen“.")
             }
-            ForEach(r.stands) { stand in
-                Button { standSheet = stand } label: { StandRow(stand: stand) }
+            ForEach(list) { stand in
+                Button {
+                    Haptics.tap()
+                    standSheet = stand
+                } label: { StandRow(stand: stand) }
                     .buttonStyle(.plain)
                     .disabled(stand.locked && !stand.has)
-                if stand.id != r.stands.last?.id { Divider().background(Theme.outline) }
+                if stand.id != list.last?.id { Divider().background(Theme.outline) }
             }
-            if !r.placeNote.isEmpty { note("Platzierer: " + r.placeNote) }
         }
     }
 
@@ -88,69 +90,17 @@ struct PlotView: View {
         Card(title: "Jobs", icon: "briefcase") {
             if r.jobs.isEmpty { note("Keine Jobs auf dem Plot gefunden.") }
             ForEach(r.jobs) { job in
-                Button { jobSheet = job } label: { JobRow(job: job) }.buttonStyle(.plain)
+                Button {
+                    Haptics.tap()
+                    jobSheet = job
+                } label: { JobRow(job: job) }.buttonStyle(.plain)
                 if job.id != r.jobs.last?.id { Divider().background(Theme.outline) }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func items(_ r: PlotReport) -> some View {
-        if r.items.isEmpty {
-            EmptyHint(icon: "shippingbox", title: "Keine Items gemeldet", text: "Öffne den Rucksack im Spiel einmal, dann sieht das Script alles.")
-        }
-        if !r.items.boxes.isEmpty {
-            Card(title: "Boxen", icon: "shippingbox.fill") {
-                ForEach(r.items.boxes) { box in
-                    ItemRow(item: box) {
-                        HStack(spacing: 6) {
-                            if box.count >= 5 { actionChip("5 öffnen") { await send("box.open", ["key": .string(box.id), "n": .number(5)]) } }
-                            actionChip("1 öffnen") { await send("box.open", ["key": .string(box.id), "n": .number(1)]) }
-                        }
-                    }
-                }
-            }
-        }
-        if !r.items.potions.isEmpty {
-            Card(title: "Tränke", icon: "drop.fill") {
-                ForEach(r.items.potions) { potion in
-                    ItemRow(item: potion) {
-                        actionChip(potion.running ? "läuft · nochmal" : "benutzen") {
-                            await send("potion.use", ["name": .string(potion.name)])
-                        }
-                    }
-                }
-            }
-        }
-        if !r.items.other.isEmpty {
-            Card(title: "Sonstiges", icon: "bag") {
-                ForEach(r.items.other) { item in ItemRow(item: item) { EmptyView() } }
-            }
-        }
-        if !r.items.materials.isEmpty {
-            Card(title: "Material", icon: "cube.fill") {
-                ForEach(r.items.materials) { item in ItemRow(item: item) { EmptyView() } }
             }
         }
     }
 
     private func note(_ text: String) -> some View {
         Text(text).font(.system(size: 12.5)).foregroundColor(Theme.faint)
-    }
-
-    private func actionChip(_ title: String, action: @escaping () async -> Void) -> some View {
-        Button { Task { await action() } } label: {
-            Text(title)
-                .font(.system(size: 12.5, weight: .semibold))
-                .foregroundColor(Theme.text)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Theme.accentSoft)
-                .overlay(Capsule().stroke(Theme.accent.opacity(0.45), lineWidth: 1))
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(busy)
     }
 
     // MARK: talking to the script
@@ -160,25 +110,9 @@ struct PlotView: View {
         loaded = true
     }
 
-    /// Sends one command, then waits up to half a minute for the script's answer.
+    /// One command; the store shows what it came to, then the plot is read again.
     private func send(_ cmd: String, _ args: [String: JSONValue]) async {
-        busy = true
-        defer { busy = false }
-        guard let sent = await store.call({ try await store.api.gameCommand(cmd, args: args, agent: agent.id) }) else { return }
-        guard let id = sent else {
-            store.say("Nicht angekommen – ist die Instanz online?")
-            return
-        }
-        store.say("An das Script geschickt …")
-        for _ in 0..<15 {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            if let list = try? await store.api.outcomes(agent: agent.id), let mine = list.first(where: { $0.id == id }), mine.done {
-                store.say((mine.ok ? "✓ " : "✗ ") + (mine.note.isEmpty ? (mine.ok ? "erledigt" : "ging nicht") : mine.note))
-                await reload()
-                return
-            }
-        }
-        store.say("Noch keine Antwort – das Script ist vielleicht beschäftigt.")
+        await store.run(cmd, args: args, agent: agent.id)
         await reload()
     }
 }
@@ -254,21 +188,6 @@ private struct JobRow: View {
     }
 }
 
-private struct ItemRow<Actions: View>: View {
-    let item: ItemEntry
-    @ViewBuilder var actions: Actions
-
-    var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name).font(.system(size: 15, weight: .medium)).foregroundColor(Theme.text)
-                Text("×" + Format.number(item.count)).font(.system(size: 12)).foregroundColor(Theme.muted)
-            }
-            Spacer()
-            actions
-        }
-    }
-}
 
 // MARK: sheets
 

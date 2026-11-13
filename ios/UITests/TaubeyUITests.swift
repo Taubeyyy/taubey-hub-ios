@@ -76,17 +76,20 @@ final class TaubeyUITests: XCTestCase {
                     if done.waitForExistence(timeout: 3) { done.tap() }
                     sleep(1)
                 }
-                let jobs = app.buttons["Jobs"].firstMatch
+                let jobs = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Jobs'")).firstMatch
                 if jobs.waitForExistence(timeout: 3) {
                     jobs.tap()
                     sleep(1)
                     shot("07d-plot-jobs")
-                }
-                let items = app.buttons["Items"].firstMatch
-                if items.waitForExistence(timeout: 3) {
-                    items.tap()
-                    sleep(1)
-                    shot("07e-plot-items")
+                    let job = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Lemon'")).firstMatch
+                    if job.waitForExistence(timeout: 3) {
+                        job.tap()
+                        sleep(2)
+                        shot("07e-plot-job")
+                        let done = app.buttons["Fertig"].firstMatch
+                        if done.waitForExistence(timeout: 3) { done.tap() }
+                        sleep(1)
+                    }
                 }
                 app.navigationBars.buttons.element(boundBy: 0).tap()
                 sleep(1)
@@ -119,6 +122,23 @@ final class TaubeyUITests: XCTestCase {
         tab("Inventar")
         sleep(2)
         shot("11-inventar")
+        let fresh = app.buttons["Neu"].firstMatch
+        if fresh.waitForExistence(timeout: 3) {
+            fresh.tap()
+            sleep(1)
+            shot("11a-inventar-neu")
+        }
+        let things = app.buttons["Items"].firstMatch
+        if things.waitForExistence(timeout: 3) {
+            things.tap()
+            sleep(1)
+            shot("11b-inventar-items")
+            app.swipeUp()
+            sleep(1)
+            shot("11c-inventar-items-unten")
+        }
+        let chars = app.buttons["Charaktere"].firstMatch
+        if chars.waitForExistence(timeout: 3) { chars.tap() }
         tab("Events")
         sleep(2)
         shot("12-events")

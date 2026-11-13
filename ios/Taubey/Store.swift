@@ -162,6 +162,33 @@ final class HubStore: ObservableObject {
         }
     }
 
+    /// One of the game's own commands (move a character, level a stand, open
+    /// a box ...) to one instance, then what it came to as a toast. The script
+    /// answers on its next beat, usually within a few seconds.
+    @discardableResult
+    func run(_ cmd: String, args: [String: JSONValue], agent: String) async -> Bool {
+        guard let sent = await call({ try await api.gameCommand(cmd, args: args, agent: agent) }) else {
+            Haptics.failure()
+            return false
+        }
+        guard let id = sent else {
+            say("Nicht angekommen – ist die Instanz online?")
+            Haptics.failure()
+            return false
+        }
+        say("Ans Script geschickt …")
+        for _ in 0..<15 {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if let list = try? await api.outcomes(agent: agent), let mine = list.first(where: { $0.id == id }), mine.done {
+                say((mine.ok ? "✓ " : "✗ ") + (mine.note.isEmpty ? (mine.ok ? "Erledigt" : "Ging nicht") : mine.note))
+                if mine.ok { Haptics.success() } else { Haptics.failure() }
+                return mine.ok
+            }
+        }
+        say("Noch keine Antwort – das Script ist gerade beschäftigt.")
+        return false
+    }
+
     func setPaused(_ paused: Bool, agent: Agent) async {
         if await call({
             try await api.apply(changes: ["Paused": .bool(paused)], agent: agent.id, game: agent.game, asDefault: false)

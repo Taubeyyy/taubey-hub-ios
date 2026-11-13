@@ -1,11 +1,13 @@
 import SwiftUI
 import Charts
 
+@MainActor
 struct OverviewView: View {
     @EnvironmentObject var store: HubStore
     @State private var metric = "cash"
     @State private var hours = 6
     @State private var points: [HistoryPoint] = []
+    @State private var allRarities = false
 
     private let ranges: [(String, String)] = [("session", "Session"), ("today", "Heute"), ("7d", "7 Tage"), ("all", "Alles")]
 
@@ -13,10 +15,14 @@ struct OverviewView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
-                    if store.accounts.count > 1 { accountSwitch }
+                    if store.accounts.count > 1 {
+                        AccountChips(selection: $store.account, accounts: store.accounts) { name in
+                            (store.overview?.agents ?? []).contains { $0.account == name && $0.online }
+                        }
+                    }
                     if let error = store.error { ErrorBanner(text: error) }
                     if let o = store.shown {
-                        tiles(o)
+                        hero(o)
                         if let next = o.nextRebirth { rebirth(next) }
                         chart
                         rarities(o)
@@ -38,6 +44,7 @@ struct OverviewView: View {
                     LiveChip(online: (store.overview?.online ?? 0) > 0, at: store.lastUpdate)
                 }
             }
+            .onChange(of: store.account) { _ in Task { await store.refresh() } }
             .task(id: "\(metric)-\(hours)-\(store.account)") { await loadHistory() }
         }
     }
@@ -48,79 +55,97 @@ struct OverviewView: View {
         if let p = await store.call({ try await store.api.history(metric: m, hours: h, account: a) }) { points = p }
     }
 
-    /// All accounts together, or one: pills that scroll sideways, with a dot
-    /// for whether that account's instance is online.
-    private var accountSwitch: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+    // MARK: the hero - what the farm earns, at a glance
+
+    private func hero(_ o: Overview) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                accountPill("", title: "Alle", online: (store.overview?.online ?? 0) > 0)
-                ForEach(store.accounts, id: \.self) { name in
-                    accountPill(name, title: name,
-                                online: (store.overview?.agents ?? []).contains(where: { $0.account == name && $0.online }))
+                Text("CASH PRO SEKUNDE").font(.system(size: 10.5, weight: .bold)).kerning(1).foregroundColor(Theme.faint)
+                Spacer()
+                HStack(spacing: 6) {
+                    StatusDot(online: o.online > 0)
+                    Text(o.online == o.total ? "\(o.online) / \(o.total) online" : "\(o.total - o.online) offline")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(o.online == o.total ? Theme.good : Theme.warn)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Color.white.opacity(0.05))
+                .clipShape(Capsule())
+            }
+            Text(Format.number(o.cashPerSec))
+                .font(.system(size: 46, weight: .heavy, design: .rounded))
+                .kerning(-1)
+                .foregroundColor(Theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .contentTransition(.numericText())
+                .animation(.easeOut(duration: 0.4), value: o.cashPerSec)
+                .padding(.top, 8)
+            Text("\(Format.number(o.cashPerSec * 3600)) pro Stunde · \(Format.number(o.cash)) auf dem Konto")
+                .font(.system(size: 13)).foregroundColor(Theme.muted)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
+            HStack(spacing: 0) {
+                figure("Fänge / min", Format.number(o.catchesPerMin))
+                separator
+                figure("Gems / min", Format.number(o.gemsPerMin))
+                separator
+                if store.account.isEmpty {
+                    figure("Fänge", Format.number(o.catches))
+                } else {
+                    figure("Rebirths", Format.number(o.rebirths))
                 }
             }
-            .padding(.horizontal, 2)
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RadialGradient(colors: [Theme.accent.opacity(0.28), .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
+        )
+        .cardSurface(radius: 18)
     }
 
-    private func accountPill(_ value: String, title: String, online: Bool) -> some View {
-        let on = store.account == value
-        return Button {
-            guard store.account != value else { return }
-            store.account = value
-            Task { await store.refresh() }
-        } label: {
-            HStack(spacing: 7) {
-                if !value.isEmpty { StatusDot(online: online) }
-                Text(title).font(.system(size: 13.5, weight: .semibold))
-            }
-            .foregroundColor(on ? Color(hex: 0x09090B) : Theme.text)
-            .padding(.horizontal, 14).padding(.vertical, 8)
-            .background(on ? Theme.text : Color.white.opacity(0.05))
-            .overlay(Capsule().stroke(on ? Color.clear : Theme.line2, lineWidth: 1))
-            .clipShape(Capsule())
+    private func figure(_ caption: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(caption.uppercased()).font(.system(size: 9.5, weight: .bold)).kerning(0.8).foregroundColor(Theme.faint)
+                .lineLimit(1).minimumScaleFactor(0.8)
+            Text(value).font(.system(size: 19, weight: .heavy, design: .rounded)).foregroundColor(Theme.text)
+                .lineLimit(1).minimumScaleFactor(0.6)
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var separator: some View {
+        Rectangle().fill(Theme.line2).frame(width: 1, height: 30).padding(.horizontal, 12)
     }
 
     // MARK: sections
 
-    private func tiles(_ o: Overview) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-            Tile(caption: "Online", value: "\(o.online) / \(o.total)", icon: "dot.radiowaves.left.and.right",
-                 sub: o.online == o.total ? "alle laufen" : "\(o.total - o.online) offline",
-                 tint: o.online > 0 ? Theme.good : Theme.muted)
-            Tile(caption: "Cash / s", value: Format.number(o.cashPerSec), icon: "dollarsign.circle",
-                 sub: Format.number(o.cashPerSec * 3600) + " pro Stunde")
-            Tile(caption: "Fänge / min", value: Format.number(o.catchesPerMin), icon: "fish",
-                 sub: Format.number(o.catches) + " diese Session")
-            Tile(caption: "Gems / min", value: Format.number(o.gemsPerMin), icon: "diamond",
-                 sub: Format.number(o.gems) + " gesamt")
-            Tile(caption: "Cash", value: Format.number(o.cash), icon: "banknote")
-            Tile(caption: "Rebirths", value: Format.number(o.rebirths), icon: "arrow.triangle.2.circlepath")
-        }
-    }
-
     private func rebirth(_ next: NextRebirth) -> some View {
-        Card(title: "Nächster Rebirth", icon: "arrow.triangle.2.circlepath") {
+        Card(title: "Nächster Rebirth", icon: "arrow.triangle.2.circlepath", trailing: store.account.isEmpty ? next.account : nil) {
             HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(next.short <= 0 ? "bereit" : "in \(Format.duration(next.eta))")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundColor(next.short <= 0 ? Theme.good : Theme.text)
-                    Text(next.account).font(.system(size: 13)).foregroundColor(Theme.muted)
-                }
+                Text(next.short <= 0 ? "bereit" : "in \(Format.duration(next.eta))")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundColor(next.short <= 0 ? Theme.good : Theme.text)
                 Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 3) {
                     Text("kostet \(Format.number(next.cost))").font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text)
                     if next.short > 0 {
-                        Text("fehlen \(Format.number(next.short))").font(.system(size: 13)).foregroundColor(Theme.muted)
+                        Text("fehlen \(Format.number(next.short))").font(.system(size: 12.5)).foregroundColor(Theme.muted)
                     }
                 }
             }
             if next.cost > 0 {
-                ProgressView(value: max(0, min(1, 1 - next.short / next.cost)))
-                    .tint(Theme.accent)
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.06))
+                        Capsule()
+                            .fill(LinearGradient(colors: [Theme.accent, Color(hex: 0xB49CFF)], startPoint: .leading, endPoint: .trailing))
+                            .frame(width: max(6, geo.size.width * CGFloat(max(0, min(1, 1 - next.short / next.cost)))))
+                            .shadow(color: Theme.accent.opacity(0.5), radius: 6)
+                    }
+                }
+                .frame(height: 6)
             }
         }
     }
@@ -132,7 +157,7 @@ struct OverviewView: View {
             if points.isEmpty || points.allSatisfy({ $0.value == 0 }) {
                 Text("Noch keine Daten in diesem Zeitraum.")
                     .font(.system(size: 14)).foregroundColor(Theme.muted)
-                    .frame(maxWidth: .infinity, minHeight: 140)
+                    .frame(maxWidth: .infinity, minHeight: 150)
             } else {
                 Chart(points) { p in
                     AreaMark(x: .value("Zeit", p.date), y: .value("pro Stunde", p.value))
@@ -141,27 +166,28 @@ struct OverviewView: View {
                         .interpolationMethod(.monotone)
                     LineMark(x: .value("Zeit", p.date), y: .value("pro Stunde", p.value))
                         .foregroundStyle(Theme.accent)
+                        .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round))
                         .interpolationMethod(.monotone)
                 }
                 .chartYAxis {
-                    AxisMarks(position: .leading) { value in
+                    AxisMarks(position: .leading, values: .automatic(desiredCount: 3)) { value in
                         AxisGridLine().foregroundStyle(Theme.outline)
                         AxisValueLabel {
-                            if let v = value.as(Double.self) { Text(Format.number(v)).foregroundColor(Theme.muted) }
+                            if let v = value.as(Double.self) { Text(Format.number(v)).foregroundColor(Theme.faint) }
                         }
                     }
                 }
                 .chartXAxis {
-                    AxisMarks { _ in
-                        AxisGridLine().foregroundStyle(Theme.outline)
-                        AxisValueLabel().foregroundStyle(Theme.muted)
+                    AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                        AxisValueLabel().foregroundStyle(Theme.faint)
                     }
                 }
                 .frame(height: 170)
             }
 
             HStack {
-                Text("pro Stunde, alle zusammen").font(.system(size: 12)).foregroundColor(Theme.faint)
+                Text(store.account.isEmpty ? "pro Stunde, alle zusammen" : "pro Stunde")
+                    .font(.system(size: 12)).foregroundColor(Theme.faint)
                 Spacer()
                 SegPicker(selection: $hours, options: [(6, "6 h"), (24, "24 h"), (168, "7 T")]).frame(width: 170)
             }
@@ -173,16 +199,17 @@ struct OverviewView: View {
             SegPicker(selection: $store.rarityRange, options: ranges)
                 .onChange(of: store.rarityRange) { _ in Task { await store.refresh() } }
 
-            let list = o.raritiesBestFirst
-            if list.isEmpty {
+            let all = o.raritiesBestFirst
+            if all.isEmpty {
                 Text("Noch nichts gefangen.").font(.system(size: 14)).foregroundColor(Theme.muted)
             } else {
                 // log scale: one God next to 800 Commons is still a bar you can see
-                let top = log10((list.map { $0.count }.max() ?? 1) + 1)
-                VStack(spacing: 9) {
+                let top = log10((all.map { $0.count }.max() ?? 1) + 1)
+                let list = allRarities ? all : Array(all.prefix(6))
+                VStack(spacing: 10) {
                     ForEach(list) { row in
                         HStack(spacing: 10) {
-                            RarityText(name: row.name, size: 14).frame(width: 110, alignment: .leading)
+                            RarityText(name: row.name, size: 13.5).frame(width: 104, alignment: .leading)
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.white.opacity(0.04))
@@ -192,13 +219,28 @@ struct OverviewView: View {
                                         .shadow(color: Theme.color(rarity: row.name).opacity(0.45), radius: 4)
                                 }
                             }
-                            .frame(height: 7)
+                            .frame(height: 6)
                             Text(Format.number(row.count))
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundColor(Theme.text)
-                                .frame(width: 56, alignment: .trailing)
+                                .frame(width: 52, alignment: .trailing)
                         }
                     }
+                }
+                if all.count > 6 {
+                    Button {
+                        Haptics.tap()
+                        withAnimation(.easeOut(duration: 0.2)) { allRarities.toggle() }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(allRarities ? "Weniger" : "Alle \(all.count) Seltenheiten")
+                            Image(systemName: allRarities ? "chevron.up" : "chevron.down").font(.system(size: 11, weight: .bold))
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -209,9 +251,22 @@ struct OverviewView: View {
             if o.events.isEmpty {
                 Text("Noch nichts passiert.").font(.system(size: 14)).foregroundColor(Theme.muted)
             } else {
-                VStack(spacing: 10) {
-                    ForEach(o.events.prefix(8)) { e in EventRow(event: e) }
+                VStack(spacing: 12) {
+                    ForEach(o.events.prefix(4)) { e in EventRow(event: e) }
                 }
+                Button {
+                    Haptics.tap()
+                    Notifier.shared.openTab = 3
+                } label: {
+                    HStack(spacing: 5) {
+                        Text("Alle Events")
+                        Image(systemName: "arrow.right").font(.system(size: 11, weight: .bold))
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Theme.accent)
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

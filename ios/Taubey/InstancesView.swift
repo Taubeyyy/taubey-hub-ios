@@ -106,10 +106,12 @@ struct AgentRow: View {
                             .background(Theme.warn.opacity(0.15)).clipShape(Capsule())
                     }
                     if agent.pending > 0 {
-                        Image(systemName: "arrow.up.circle").font(.system(size: 12)).foregroundColor(Theme.accent)
+                        Text("SENDET").font(.system(size: 9.5, weight: .bold)).foregroundColor(Theme.accent)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(Theme.accentSoft).clipShape(Capsule())
                     }
                 }
-                Text(agent.online ? agent.note : "offline · zuletzt \(Format.duration(Double(agent.age ?? 0))) her")
+                Text(agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline · vor \(Format.duration(Double(agent.age ?? 0)))")
                     .font(.system(size: 13)).foregroundColor(Theme.muted).lineLimit(1)
             }
             Spacer()
@@ -130,6 +132,7 @@ struct InstanceDetailView: View {
     let fallback: Agent
     @State private var confirmRemove = false
     @State private var confirmReset = false
+    @State private var plot: PlotReport?
     @Environment(\.dismiss) private var dismiss
 
     /// The newest copy from the store, so the screen follows the refreshes.
@@ -143,11 +146,28 @@ struct InstanceDetailView: View {
                 header
                 actions
                 stats
-                Card(title: "Plot", icon: "square.grid.3x3") {
+                Card(title: "Stände & Jobs", icon: "square.grid.3x3") {
                     NavigationLink {
                         PlotView(agent: agent)
                     } label: {
-                        row("Stände, Jobs & Items", icon: "person.3", detail: nil)
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.3.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(Theme.accent)
+                                .frame(width: 30, height: 30)
+                                .background(Theme.accentSoft)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(plot.map { "\($0.occupied) von \($0.stands.count) Ständen belegt" } ?? "Stände, Jobs & Leveln")
+                                    .font(.system(size: 15, weight: .medium)).foregroundColor(Theme.text)
+                                Text(plot.map { "\(Format.number($0.income))/s · Futter \(Format.number($0.food))" } ?? "Aus der App steuern")
+                                    .font(.system(size: 12)).foregroundColor(Theme.faint)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundColor(Theme.muted)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
                     }
                     .accessibilityIdentifier("plotLink")
                 }
@@ -175,7 +195,11 @@ struct InstanceDetailView: View {
         .screenBackground()
         .navigationTitle(agent.account)
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await store.refresh() }
+        .refreshable {
+            await store.refresh()
+            plot = (try? await store.api.plot(agent: agentId)) ?? plot
+        }
+        .task { plot = try? await store.api.plot(agent: agentId) }
         .confirmationDialog("Eigene Einstellungen dieser Instanz verwerfen?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Zurücksetzen", role: .destructive) {
                 Task {
@@ -202,12 +226,12 @@ struct InstanceDetailView: View {
                 Avatar(name: agent.account, size: 44, online: agent.online)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(agent.game).font(.system(size: 13)).foregroundColor(Theme.muted)
-                    Text(agent.online ? (agent.note.isEmpty ? "läuft" : agent.note) : "offline")
+                    Text(agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline")
                         .font(.system(size: 17, weight: .semibold)).foregroundColor(Theme.text)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("seit").font(.system(size: 12)).foregroundColor(Theme.muted)
+                    Text("läuft seit").font(.system(size: 12)).foregroundColor(Theme.muted)
                     Text(Format.duration(Double(agent.uptime ?? 0))).font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text)
                 }
             }
@@ -256,7 +280,7 @@ struct InstanceDetailView: View {
     }
 
     private var stats: some View {
-        Card(title: "Was das Script meldet", icon: "list.bullet.rectangle") {
+        Card(title: "Was das Script meldet", icon: "text.alignleft") {
             let lines = agent.statLines
             if lines.isEmpty {
                 Text("Noch nichts gemeldet.").font(.system(size: 14)).foregroundColor(Theme.muted)
@@ -264,9 +288,9 @@ struct InstanceDetailView: View {
                 VStack(spacing: 8) {
                     ForEach(lines.indices, id: \.self) { i in
                         HStack(alignment: .top) {
-                            Text(lines[i].0).font(.system(size: 14)).foregroundColor(Theme.muted)
+                            Text(Lingo.label(lines[i].0)).font(.system(size: 14)).foregroundColor(Theme.muted)
                             Spacer(minLength: 12)
-                            Text(lines[i].1).font(.system(size: 14, weight: .medium)).foregroundColor(Theme.text)
+                            Text(Lingo.value(lines[i].1)).font(.system(size: 14, weight: .medium)).foregroundColor(Theme.text)
                                 .multilineTextAlignment(.trailing)
                         }
                     }

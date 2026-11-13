@@ -65,6 +65,51 @@ struct Avatar: View {
     }
 }
 
+/// "Alle" and one pill per account, a dot for whether it is online - the
+/// same switch on the overview and in the inventory.
+struct AccountChips: View {
+    @Binding var selection: String
+    let accounts: [String]
+    var online: (String) -> Bool = { _ in false }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                pill("", title: "Alle", dot: nil)
+                ForEach(accounts, id: \.self) { name in pill(name, title: name, dot: online(name)) }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private func pill(_ value: String, title: String, dot: Bool?) -> some View {
+        let on = selection == value
+        return Button {
+            guard selection != value else { return }
+            Haptics.tap()
+            withAnimation(.easeOut(duration: 0.18)) { selection = value }
+        } label: {
+            HStack(spacing: 7) {
+                if let dot = dot { StatusDot(online: dot) }
+                Text(title).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
+            }
+            .foregroundColor(on ? Color(hex: 0x09090B) : Theme.text)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .background(on ? Theme.text : Color.white.opacity(0.05))
+            .overlay(Capsule().stroke(on ? Color.clear : Theme.line2, lineWidth: 1))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// A small tap in the hand for what happened.
+enum Haptics {
+    static func tap() { UISelectionFeedbackGenerator().selectionChanged() }
+    static func success() { UINotificationFeedbackGenerator().notificationOccurred(.success) }
+    static func failure() { UINotificationFeedbackGenerator().notificationOccurred(.error) }
+}
+
 /// Events sorted into days, newest first: Heute, Gestern, then dates.
 func dayTitle(_ date: Date, now: Date = Date()) -> String {
     let cal = Calendar.current

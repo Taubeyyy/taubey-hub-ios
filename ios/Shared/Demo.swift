@@ -109,10 +109,18 @@ enum Demo {
         """
     }
 
-    static let inventory = """
+    static var inventory: String {
+        let t = Int(now)
+        return """
     {"ok":true,"ladder":["Common","Uncommon","Rare","Epic","Legendary","Mythical","Cosmic","Secret","Rainbow","Ascended","Divine",
                          "Supreme","Celestial","Ancient","God","Omniscient","Apex","Transcendent","Exclusive"],
-     "rows":[{"id":"a","account":"Taubeyyyy","game":"Fish an Anime RNG","online":true,"age":30,"items":[
+     "rows":[{"id":"a","account":"Taubeyyyy","game":"Fish an Anime RNG","online":true,"age":30,
+        "fresh":{"Kaneko II|Void":\(t - 1500),"AI Hoshi|":\(t - 9000)},
+        "things":{"boxes":[{"key":"LegendaryCase","name":"Legendary Box","count":21},{"key":"CosmicCase","name":"Cosmic Box","count":3}],
+          "potions":[{"name":"Sinister Potion","count":4,"running":false},{"name":"Luck Potion","count":2,"running":true}],
+          "items":[{"name":"Bat","count":1}],
+          "materials":[{"name":"Amnetic Coin","count":343},{"name":"Lucrative Shard","count":203},{"name":"Heavenly Feather","count":97}]},
+        "items":[
         {"name":"AI Hoshi","rarity":"God","mutation":"","count":1,"level":12,"cps":1200000000},
         {"name":"Kaneko II","rarity":"Celestial","mutation":"Void","count":3,"level":4,"cps":82000000},
         {"name":"Rubie Hoshi","rarity":"Divine","mutation":"Electric","count":76,"level":1,"cps":2300000},
@@ -124,6 +132,7 @@ enum Demo {
         {"name":"Rubie Hoshi","rarity":"Divine","mutation":"Electric","count":4,"level":3,"cps":2400000},
         {"name":"2V","rarity":"Ascended","mutation":"","count":22,"level":1,"cps":285714}]}]}
     """
+    }
 
     static let schema = """
     {"ok":true,"schema":{"v":1,"sections":[

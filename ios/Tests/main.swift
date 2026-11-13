@@ -155,12 +155,33 @@ check(!alertSettings.trouble && alertSettings.silent && !alertSettings.back && a
 check(alertSettings.appPush && alertSettings.appDevices == 2, "apns state read")
 check(AlertSettings(Demo.answer("/api/alerts")).appPush, "demo alerts")
 
+// MARK: German for what the script says
+check(Lingo.label("Next rebirth") == "Nächster Rebirth" && Lingo.label("Whatever") == "Whatever", "labels")
+check(Lingo.value("34m 46s  (236Qi short)") == "34m 46s (fehlen 236Qi)", "short got \(Lingo.value("34m 46s  (236Qi short)"))")
+check(Lingo.value("all bought") == "alle gekauft", "all bought")
+check(Lingo.value("hooked - Divine") == "am Haken – Divine", "status got \(Lingo.value("hooked - Divine"))")
+check(Lingo.value("off") == "aus" && Lingo.value("Rod of the Heavens") == "Rod of the Heavens", "names stay")
+check(Lingo.event("Rejoined after: teleported by the game") == "Neu verbunden – vom Spiel teleportiert",
+      "rejoin event got \(Lingo.event("Rejoined after: teleported by the game"))")
+check(Lingo.event("no catches for 10 min") == "Seit 10 min kein Fang", "stall event got \(Lingo.event("no catches for 10 min"))")
+check(Lingo.event("Rubie Hoshi [Electric]") == "Rubie Hoshi [Electric]", "a catch stays")
+check(Lingo.detail("afk screen off, fps cap 60 · Potassium") == "AFK-Bild aus, FPS-Limit 60 · Potassium", "detail")
+
+// MARK: what is new, and the items
+let demoInv = Inventory(Demo.answer("/api/inventory"))
+let fresh = demoInv.fresh(game: "Fish an Anime RNG", account: "")
+check(fresh.count == 2 && fresh[0].item.name == "Kaneko II" && fresh[1].item.name == "AI Hoshi", "fresh newest first got \(fresh.map { $0.item.name })")
+check(demoInv.fresh(game: "Fish an Anime RNG", account: "Alt").isEmpty, "nothing new on the alt")
+check(demoInv.things(game: "Fish an Anime RNG", account: "").count == 1, "items from one instance")
+check(demoInv.things(game: "Fish an Anime RNG", account: "").first?.things?.boxes.first?.count == 21, "boxes in the inventory")
+
 // MARK: plot (remote control)
 if let report = PlotReport(Demo.answer("/api/agent/1%7Calt/plot")) {
     check(report.stands.count == 7 && report.occupied == 6, "stands read got \(report.stands.count)/\(report.occupied)")
     check(report.stands[0].held && !report.stands[0].pinned && report.stands[0].costTen == 460000000, "stand flags and prices")
     check(report.stands[2].costTen == nil && report.stands[6].locked, "missing price stays nil, locked stand")
     check(report.stands[3].label == "Stand 5 · bezahlt" && report.stands[0].label == "Stand 1", "stand label got \(report.stands[3].label)")
+    check(report.stands[3].number == 5 && report.stands[4].number == 17 && report.stands[0].number == 1, "stand numbers")
     check(report.jobs.count == 3 && report.jobs[1].whoName == "Kafka" && report.jobs[1].held, "jobs read")
     check(!report.jobs[2].busy && report.jobs[2].whoName.isEmpty, "free job")
     check(report.spare.count == 3 && report.spare[0].id == "C|Almira Eye|Gold|L353", "spare read")

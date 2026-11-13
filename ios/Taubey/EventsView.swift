@@ -71,11 +71,12 @@ struct EventRow: View {
                 .clipShape(Circle())
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(event.title).font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text).lineLimit(2)
+                    Text(event.kind == "catch" ? event.title : Lingo.event(event.title))
+                        .font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text).lineLimit(2)
                     if event.kind == "catch" && !event.detail.isEmpty { RarityText(name: event.detail, size: 12) }
                 }
                 if event.kind != "catch" && !event.detail.isEmpty {
-                    Text(event.detail).font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(2)
+                    Text(Lingo.detail(event.detail)).font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(2)
                 }
                 Text("\(event.account) · \(Format.ago(event.at))").font(.system(size: 11)).foregroundColor(Theme.muted)
             }
