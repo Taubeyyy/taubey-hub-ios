@@ -94,7 +94,7 @@ final class TaubeyUITests: XCTestCase {
                 app.navigationBars.buttons.element(boundBy: 0).tap()
                 sleep(1)
             }
-            let edit =app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Einstellungen bearbeiten'")).firstMatch
+            let edit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Einstellungen bearbeiten'")).firstMatch
             if edit.waitForExistence(timeout: 3) {
                 edit.tap()
                 sleep(2)
