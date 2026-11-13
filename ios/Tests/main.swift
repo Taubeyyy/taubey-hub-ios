@@ -155,5 +155,27 @@ check(!alertSettings.trouble && alertSettings.silent && !alertSettings.back && a
 check(alertSettings.appPush && alertSettings.appDevices == 2, "apns state read")
 check(AlertSettings(Demo.answer("/api/alerts")).appPush, "demo alerts")
 
+// MARK: plot (remote control)
+if let report = PlotReport(Demo.answer("/api/agent/1%7Calt/plot")) {
+    check(report.stands.count == 7 && report.occupied == 6, "stands read got \(report.stands.count)/\(report.occupied)")
+    check(report.stands[0].held && !report.stands[0].pinned && report.stands[0].costTen == 460000000, "stand flags and prices")
+    check(report.stands[2].costTen == nil && report.stands[6].locked, "missing price stays nil, locked stand")
+    check(report.stands[3].label == "Stand 5 · bezahlt" && report.stands[0].label == "Stand 1", "stand label got \(report.stands[3].label)")
+    check(report.jobs.count == 3 && report.jobs[1].whoName == "Kafka" && report.jobs[1].held, "jobs read")
+    check(!report.jobs[2].busy && report.jobs[2].whoName.isEmpty, "free job")
+    check(report.spare.count == 3 && report.spare[0].id == "C|Almira Eye|Gold|L353", "spare read")
+    check(report.spare[1].potential > report.spare[0].potential, "a strong level-1 has more in it than a levelled one")
+    check(report.spare[1].title == "Miki [Slime]" && report.spare[2].title == "Orihira", "spare titles")
+    check(report.items.boxes.first?.count == 21 && report.items.potions[1].running && report.items.materials.count == 3, "items read")
+    check(report.age == 12 && report.smart, "age and placer mode")
+} else {
+    check(false, "demo plot does not parse")
+}
+check(PlotReport(json("{\"ok\":true,\"plot\":null,\"age\":null}")) == nil, "no report yet")
+let outcome = CommandOutcome(json("{\"id\":7,\"cmd\":\"stand.swap\",\"done\":true,\"result\":{\"ok\":false,\"note\":\"not in the bag\"}}"))
+check(outcome?.done == true && outcome?.ok == false && outcome?.note == "not in the bag", "command outcome")
+check(CommandOutcome(json("{\"id\":8,\"done\":false,\"result\":null}"))?.done == false, "command still out")
+check(HubAPI.agentPath("1|alt|fish an anime rng") == "1%7Calt%7Cfish%20an%20anime%20rng", "agent path got \(HubAPI.agentPath("1|alt|fish an anime rng"))")
+
 print("\(passed) passed, \(failures) failed")
 if failures > 0 { exit(1) }

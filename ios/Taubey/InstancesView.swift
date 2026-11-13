@@ -143,6 +143,14 @@ struct InstanceDetailView: View {
                 header
                 actions
                 stats
+                Card(title: "Plot", icon: "square.grid.3x3") {
+                    NavigationLink {
+                        PlotView(agent: agent)
+                    } label: {
+                        row("Stände, Jobs & Items", icon: "person.3", detail: nil)
+                    }
+                    .accessibilityIdentifier("plotLink")
+                }
                 Card(title: "Einstellungen", icon: "slider.horizontal.3") {
                     NavigationLink {
                         SettingsEditor(agent: agent)

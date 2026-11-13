@@ -14,8 +14,13 @@ enum Demo {
         if p.hasPrefix("/api/history") { return history() }
         if p.hasSuffix("/schema") { return json(schema) }
         if p.hasSuffix("/config") && p.hasPrefix("/api/game/") { return json("{\"ok\":true,\"config\":{\"AutoFish\":true,\"HubFpsCap\":60}}") }
+        if p.hasSuffix("/plot") && p.hasPrefix("/api/agent/") { return json(plot) }
+        if p.hasSuffix("/commands") && p.hasPrefix("/api/agent/") {
+            return json("{\"ok\":true,\"rows\":[{\"id\":7,\"cmd\":\"stand.swap\",\"done\":true,\"result\":{\"ok\":true,\"note\":\"placed Lula (Ancient) instead of Froza\"}}]}")
+        }
         if p.hasPrefix("/api/agent/") { return json(agentConfig) }
         if p.hasPrefix("/api/auth/me") { return json("{\"ok\":true,\"name\":\"Taubey\"}") }
+        if p.hasPrefix("/api/command") { return json("{\"ok\":true,\"sent\":1,\"ids\":[7]}") }
         if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"apns\":1,\"apnsErrors\":[]}") }
         if p.hasPrefix("/api/alerts") {
             return json("{\"ok\":true,\"alerts\":{\"trouble\":true,\"silent\":true,\"back\":true,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":true,\"devices\":1}}")
@@ -26,6 +31,32 @@ enum Demo {
     private static func json(_ text: String) -> JSONValue {
         (try? JSONValue.parse(Data(text.utf8))) ?? .null
     }
+
+    /// A plot like the main's on 2026-11-13 (full dump), shortened.
+    static let plot = """
+    {"ok":true,"age":12,"plot":{"plot":"Plot5","food":4293362807,"cash":4646418648103119000,"gems":5408552,"smart":true,
+     "place":"placed Lula (Ancient) instead of Froza",
+     "stands":[
+      {"id":"1","has":true,"name":"Rimura Tempesta","rarity":"God","level":326,"cps":2040000000000,"locked":false,"pinned":false,"held":true,"one":41000000,"ten":460000000,"max":4200000000},
+      {"id":"2","has":true,"name":"Angelia","rarity":"God","level":334,"cps":1670000000000,"locked":false,"pinned":false,"held":false,"one":50000000,"ten":560000000},
+      {"id":"3","has":true,"name":"Froza","rarity":"God","level":332,"cps":954000000000,"locked":false,"pinned":true,"held":false,"one":48000000},
+      {"id":"Purchases.5PAID","has":true,"name":"Lula","rarity":"Ancient","level":360,"cps":196000000000,"locked":false,"pinned":false,"held":false,"one":40000000},
+      {"id":"Purchases.17","has":true,"name":"Nazira II","rarity":"Celestial","level":468,"cps":30300000000,"locked":false,"pinned":false,"held":false,"one":190000000},
+      {"id":"Purchases.40PAID","has":true,"name":"Elfaria","rarity":"Ancient","level":359,"cps":17500000000,"locked":false,"pinned":false,"held":false,"one":39000000},
+      {"id":"Purchases.41","has":false,"name":"","rarity":"","level":0,"cps":0,"locked":true,"pinned":false,"held":false}],
+     "jobs":[
+      {"id":"garden1","name":"Garden1","kind":"Gardens","busy":true,"pinned":false,"held":false,"who":{"name":"Astra","rarity":"Ancient","cps":145000000,"level":1}},
+      {"id":"lemonstand","name":"Lemon Stand","kind":"Lemon stand","busy":true,"pinned":false,"held":true,"who":{"name":"Kafka","rarity":"Ancient","cps":580000000,"level":1}},
+      {"id":"fishingdock","name":"Fishing Dock","kind":"Fishing dock","busy":false,"pinned":false,"held":false}],
+     "spare":[
+      {"key":"C|Almira Eye|Gold|L353","name":"Almira Eye","rarity":"Ancient","mutation":"Gold","level":353,"cps":21500000000,"count":1},
+      {"key":"C|Miki|Slime","name":"Miki","rarity":"Ancient","mutation":"Slime","level":1,"cps":290000000,"count":1},
+      {"key":"C|Orihira|","name":"Orihira","rarity":"Ancient","mutation":"","level":1,"cps":145000000,"count":5}],
+     "items":{"boxes":[{"key":"LegendaryCase","name":"Legendary Box","count":21},{"key":"CosmicCase","name":"Cosmic Box","count":3}],
+      "potions":[{"name":"Sinister Potion","count":4,"running":false},{"name":"Luck Potion","count":2,"running":true}],
+      "items":[{"name":"Bat","count":1}],
+      "materials":[{"name":"Amnetic Coin","count":343},{"name":"Lucrative Shard","count":203},{"name":"Heavenly Feather","count":97}]}}}
+    """
 
     static var events: String {
         let t = Int(now)

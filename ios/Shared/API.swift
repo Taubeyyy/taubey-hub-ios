@@ -185,6 +185,29 @@ final class HubAPI {
         try await post("/api/command", .object(["cmd": .string(cmd), "targets": .array(agents.map { .string($0) })]))["sent"].int ?? 0
     }
 
+    // MARK: remote control - the plot of one instance
+
+    static func agentPath(_ agent: String) -> String {
+        agent.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? agent
+    }
+
+    func plot(agent: String) async throws -> PlotReport? {
+        PlotReport(try await get("/api/agent/\(HubAPI.agentPath(agent))/plot"))
+    }
+
+    /// One of the game's own commands (stand.swap, job.set, box.open ...) to
+    /// one instance. Returns the command's id, to ask after its outcome.
+    func gameCommand(_ cmd: String, args: [String: JSONValue], agent: String) async throws -> Int? {
+        let answer = try await post("/api/command", .object([
+            "cmd": .string(cmd), "args": .object(args), "targets": .array([.string(agent)]),
+        ]))
+        return answer["ids"][0].int
+    }
+
+    func outcomes(agent: String) async throws -> [CommandOutcome] {
+        (try await get("/api/agent/\(HubAPI.agentPath(agent))/commands")["rows"].array ?? []).compactMap(CommandOutcome.init)
+    }
+
     func reset(agent: String) async throws {
         let id = agent.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? agent
         try await post("/api/agent/\(id)/reset")

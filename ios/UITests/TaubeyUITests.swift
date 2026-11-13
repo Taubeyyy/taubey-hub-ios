@@ -55,7 +55,43 @@ final class TaubeyUITests: XCTestCase {
             app.swipeUp()
             sleep(1)
             shot("07-instanz-unten")
-            let edit = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Einstellungen bearbeiten'")).firstMatch
+            // the remote control: stands, a stand's sheet, jobs, items
+            let plot = app.buttons["plotLink"].firstMatch
+            if plot.waitForExistence(timeout: 3) {
+                plot.tap()
+                sleep(2)
+                shot("07a-plot-staende")
+                let stand = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Rimura'")).firstMatch
+                if stand.waitForExistence(timeout: 3) {
+                    stand.tap()
+                    sleep(2)
+                    shot("07b-plot-stand")
+                    let swap = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Tauschen'")).firstMatch
+                    if swap.waitForExistence(timeout: 3) {
+                        swap.tap()
+                        sleep(1)
+                        shot("07c-plot-tauschen")
+                    }
+                    let done = app.buttons["Fertig"].firstMatch
+                    if done.waitForExistence(timeout: 3) { done.tap() }
+                    sleep(1)
+                }
+                let jobs = app.buttons["Jobs"].firstMatch
+                if jobs.waitForExistence(timeout: 3) {
+                    jobs.tap()
+                    sleep(1)
+                    shot("07d-plot-jobs")
+                }
+                let items = app.buttons["Items"].firstMatch
+                if items.waitForExistence(timeout: 3) {
+                    items.tap()
+                    sleep(1)
+                    shot("07e-plot-items")
+                }
+                app.navigationBars.buttons.element(boundBy: 0).tap()
+                sleep(1)
+            }
+            let edit =app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Einstellungen bearbeiten'")).firstMatch
             if edit.waitForExistence(timeout: 3) {
                 edit.tap()
                 sleep(2)
