@@ -50,7 +50,7 @@ struct PushSection: View {
             if settings.appPush {
                 Section {
                     Toggle(isOn: bind(\.trouble, "trouble")) { Label("Probleme", systemImage: "exclamationmark.triangle") }
-                    Toggle(isOn: bind(\.silent, "silent")) { Label("Account meldet sich nicht mehr", systemImage: "bolt.horizontal.circle") }
+                    Toggle(isOn: bind(\.silent, "silent")) { Label("Account geht offline", systemImage: "bolt.horizontal.circle") }
                     Toggle(isOn: bind(\.back, "back")) { Label("Account ist wieder da", systemImage: "checkmark.circle") }
                     Toggle(isOn: bind(\.summary, "summary")) { Label("Tagesbericht", systemImage: "doc.text") }
                     HStack {

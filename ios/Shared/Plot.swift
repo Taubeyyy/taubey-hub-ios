@@ -110,6 +110,11 @@ struct PlotStand: Identifiable, Equatable {
 }
 
 struct PlotJob: Identifiable, Equatable {
+    /// The script's kind of job, in German.
+    static func kindName(_ kind: String) -> String {
+        ["Gardens": "Garten", "Lemon stand": "Limonadenstand", "Fishing dock": "Angelsteg", "Other stands": "Stand"][kind] ?? kind
+    }
+
     let id: String
     let name: String
     let kind: String

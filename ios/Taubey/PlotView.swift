@@ -332,7 +332,7 @@ private struct JobSheet: View {
             List {
                 Section {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(job.kind).font(.system(size: 13)).foregroundColor(Theme.muted)
+                        Text("Job · " + PlotJob.kindName(job.kind)).font(.system(size: 13)).foregroundColor(Theme.muted)
                         Text(job.name).font(.system(size: 20, weight: .bold)).foregroundColor(Theme.text)
                         Text(job.busy ? (job.whoName.isEmpty ? "besetzt" : "\(job.whoName) · \(job.whoRarity) · Lv \(job.whoLevel)") : "frei")
                             .font(.system(size: 13)).foregroundColor(Theme.muted)

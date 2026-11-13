@@ -239,6 +239,8 @@ struct InventoryView: View {
             Text(title)
                 .font(.system(size: 12.5, weight: .semibold))
                 .foregroundColor(Theme.text)
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 11).padding(.vertical, 6)
                 .background(Theme.accentSoft)
                 .overlay(Capsule().stroke(Theme.accent.opacity(0.45), lineWidth: 1))
