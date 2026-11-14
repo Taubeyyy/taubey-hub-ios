@@ -97,6 +97,9 @@ struct PlotStand: Identifiable, Equatable {
         return Int(last.filter { $0.isNumber }) ?? Int.max
     }
 
+    /// "5" for the corner of a tile.
+    var shortNumber: String { number == Int.max ? id : String(number) }
+
     /// "Purchases.5PAID" reads as "Stand 5 · bezahlt", "1" as "Stand 1".
     var label: String {
         var short = id.components(separatedBy: ".").last ?? id

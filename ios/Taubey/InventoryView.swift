@@ -54,7 +54,8 @@ struct InventoryView: View {
             .toolbar { ToolbarItem(placement: .navigationBarTrailing) { sortMenu } }
             .task { await load() }
             .sheet(item: $editing) { item in
-                PictureSheet(item: item, game: game) { pictures += 1 }
+                CharacterSheet(item: item, game: game, agent: agentId, account: account) { pictures += 1 }
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -69,6 +70,12 @@ struct InventoryView: View {
             }
             if !account.isEmpty && !accounts(inv).contains(account) { account = "" }
         }
+    }
+
+    /// The instance of the account picked at the top - where moves go.
+    private var agentId: String? {
+        guard !account.isEmpty else { return nil }
+        return inventory?.rows.first { $0.game == game && $0.account == account }?.id
     }
 
     private func accounts(_ inv: Inventory) -> [String] {
@@ -279,7 +286,10 @@ struct ItemRow: View {
             .overlay(RoundedRectangle(cornerRadius: 11).stroke(Theme.color(rarity: item.rarity).opacity(0.65), lineWidth: 1.5))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
+                HStack(spacing: 5) {
+                    Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
+                    if item.locked { Image(systemName: "lock.fill").font(.system(size: 10)).foregroundColor(Theme.muted) }
+                }
                 HStack(spacing: 6) {
                     RarityText(name: item.rarity, size: 12)
                     if !item.mutation.isEmpty {

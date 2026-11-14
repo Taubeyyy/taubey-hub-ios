@@ -122,6 +122,28 @@ final class TaubeyUITests: XCTestCase {
         tab("Inventar")
         sleep(2)
         shot("11-inventar")
+        let altChip = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Taubeyyyy'")).firstMatch
+        if altChip.waitForExistence(timeout: 3) {
+            altChip.tap()
+            sleep(1)
+            let hoshi = app.buttons.matching(NSPredicate(format: "label CONTAINS 'AI Hoshi'")).firstMatch
+            if hoshi.waitForExistence(timeout: 3) {
+                hoshi.tap()
+                sleep(2)
+                shot("11d-charakter")
+                let place = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Auf einen Stand'")).firstMatch
+                if place.waitForExistence(timeout: 3) {
+                    place.tap()
+                    sleep(2)
+                    shot("11e-charakter-stand")
+                }
+                let done = app.buttons["Fertig"].firstMatch
+                if done.waitForExistence(timeout: 3) { done.tap() }
+                sleep(1)
+            }
+            let all = app.buttons["Alle"].firstMatch
+            if all.waitForExistence(timeout: 3) { all.tap() }
+        }
         let fresh = app.buttons["Neu"].firstMatch
         if fresh.waitForExistence(timeout: 3) {
             fresh.tap()

@@ -167,9 +167,13 @@ struct Item: Identifiable, Hashable {
     let rarity: String
     let mutation: String
     var count: Int
-    let level: Int
-    let cps: Double
+    var level: Int
+    var cps: Double
     var accounts: Set<String>
+    /// The bag key of the best copy (C|Name|Mutation, |L297 when levelled) -
+    /// what the script moves.
+    var key: String
+    var locked: Bool
 
     var id: String { name + "|" + mutation }
 
@@ -182,6 +186,8 @@ struct Item: Identifiable, Hashable {
         level = j["level"].int ?? 0
         cps = j["cps"].double ?? 0
         accounts = [account]
+        key = j["key"].string ?? "C|\(name)|\(mutation)"
+        locked = j["locked"].bool ?? false
     }
 }
 
@@ -243,6 +249,12 @@ struct Inventory {
                 if var have = byId[item.id] {
                     have.count += item.count
                     have.accounts.formUnion(item.accounts)
+                    have.locked = have.locked || item.locked
+                    if item.cps > have.cps {
+                        have.cps = item.cps
+                        have.level = item.level
+                        have.key = item.key
+                    }
                     byId[item.id] = have
                 } else {
                     byId[item.id] = item

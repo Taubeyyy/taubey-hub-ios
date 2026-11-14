@@ -49,13 +49,13 @@ struct PlotView: View {
             }
         }
         .sheet(item: $standSheet) { stand in
-            StandSheet(stand: stand, spare: report?.spare ?? [], food: report?.food ?? 0, smart: report?.smart ?? true) { cmd, args in
+            StandSheet(stand: stand, game: agent.game, spare: report?.spare ?? [], food: report?.food ?? 0, smart: report?.smart ?? true) { cmd, args in
                 await send(cmd, args)
             }
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $jobSheet) { job in
-            JobSheet(job: job, spare: report?.spare ?? []) { cmd, args in
+            JobSheet(job: job, game: agent.game, spare: report?.spare ?? []) { cmd, args in
                 await send(cmd, args)
             }
             .presentationDetents([.medium, .large])
@@ -79,14 +79,15 @@ struct PlotView: View {
             if !r.smart {
                 note("Das Script platziert gerade mit dem Equip Best des Spiels – das hält sich nicht an „In Ruhe lassen“.")
             }
-            ForEach(list) { stand in
-                Button {
-                    Haptics.tap()
-                    standSheet = stand
-                } label: { StandRow(stand: stand) }
-                    .buttonStyle(PressStyle(scale: 0.985))
-                    .disabled(stand.locked && !stand.has)
-                if stand.id != list.last?.id { Divider().background(Theme.outline) }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                ForEach(list) { stand in
+                    Button {
+                        Haptics.tap()
+                        standSheet = stand
+                    } label: { StandTile(stand: stand, game: agent.game) }
+                        .buttonStyle(PressStyle(scale: 0.95))
+                        .disabled(stand.locked && !stand.has)
+                }
             }
         }
     }
@@ -94,12 +95,13 @@ struct PlotView: View {
     private func jobs(_ r: PlotReport) -> some View {
         Card(title: "Jobs", icon: "briefcase") {
             if r.jobs.isEmpty { note("Keine Jobs auf dem Plot gefunden.") }
-            ForEach(r.jobs) { job in
-                Button {
-                    Haptics.tap()
-                    jobSheet = job
-                } label: { JobRow(job: job) }.buttonStyle(PressStyle(scale: 0.985))
-                if job.id != r.jobs.last?.id { Divider().background(Theme.outline) }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                ForEach(r.jobs) { job in
+                    Button {
+                        Haptics.tap()
+                        jobSheet = job
+                    } label: { JobTile(job: job, game: agent.game) }.buttonStyle(PressStyle(scale: 0.96))
+                }
             }
         }
     }
@@ -198,6 +200,7 @@ private struct JobRow: View {
 /// One stand: level it, swap who stands there, take them off, leave it alone.
 private struct StandSheet: View {
     let stand: PlotStand
+    let game: String
     let spare: [SpareChar]
     let food: Double
     let smart: Bool
@@ -206,8 +209,9 @@ private struct StandSheet: View {
     @State private var held: Bool
     @State private var confirmPickup = false
 
-    init(stand: PlotStand, spare: [SpareChar], food: Double, smart: Bool, send: @escaping (String, [String: JSONValue]) async -> Void) {
+    init(stand: PlotStand, game: String, spare: [SpareChar], food: Double, smart: Bool, send: @escaping (String, [String: JSONValue]) async -> Void) {
         self.stand = stand
+        self.game = game
         self.spare = spare
         self.food = food
         self.smart = smart
@@ -219,7 +223,8 @@ private struct StandSheet: View {
         NavigationStack {
             List {
                 Section {
-                    HStack {
+                    HStack(spacing: 14) {
+                        if stand.has { Portrait(name: stand.name, game: game, rarity: stand.rarity, size: 64, radius: 16) }
                         VStack(alignment: .leading, spacing: 3) {
                             if stand.has { RarityText(name: stand.rarity, size: 13) }
                             Text(stand.has ? stand.name : "Leerer Stand").font(.system(size: 20, weight: .bold)).foregroundColor(Theme.text)
@@ -247,7 +252,7 @@ private struct StandSheet: View {
                     Section {
                         NavigationLink {
                             SparePicker(spare: spare, title: stand.has ? "Wer kommt auf \(stand.label)?" : "Wer kommt drauf?",
-                                        close: { dismiss() }) { char in
+                                        game: game, close: { dismiss() }) { char in
                                 Task { await send("stand.swap", ["stand": .string(stand.id), "key": .string(char.id)]) }
                                 dismiss()
                             }
@@ -322,13 +327,15 @@ private struct StandSheet: View {
 /// One job: who works there, put someone else there, free it, leave it alone.
 private struct JobSheet: View {
     let job: PlotJob
+    let game: String
     let spare: [SpareChar]
     let send: (String, [String: JSONValue]) async -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var held: Bool
 
-    init(job: PlotJob, spare: [SpareChar], send: @escaping (String, [String: JSONValue]) async -> Void) {
+    init(job: PlotJob, game: String, spare: [SpareChar], send: @escaping (String, [String: JSONValue]) async -> Void) {
         self.job = job
+        self.game = game
         self.spare = spare
         self.send = send
         _held = State(initialValue: job.held)
@@ -349,7 +356,7 @@ private struct JobSheet: View {
 
                 Section {
                     NavigationLink {
-                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?", close: { dismiss() }) { char in
+                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?", game: game, close: { dismiss() }) { char in
                             Task { await send("job.set", ["job": .string(job.id), "key": .string(char.id)]) }
                             dismiss()
                         }
@@ -395,6 +402,7 @@ private struct JobSheet: View {
 private struct SparePicker: View {
     let spare: [SpareChar]
     let title: String
+    var game: String = ""
     /// closes the whole sheet, not just this list
     let close: () -> Void
     let pick: (SpareChar) -> Void
@@ -418,7 +426,7 @@ private struct SparePicker: View {
                 ForEach(sorted) { char in
                     Button { pick(char) } label: {
                         HStack(spacing: 10) {
-                            RoundedRectangle(cornerRadius: 3).fill(Theme.color(rarity: char.rarity)).frame(width: 4, height: 30)
+                            Portrait(name: char.name, game: game, rarity: char.rarity, size: 40, radius: 11)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(char.title).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
                                 Text("\(char.rarity) · Lv \(char.level)" + (char.count > 1 ? " · ×\(char.count)" : ""))
