@@ -123,7 +123,8 @@ final class HubStore: ObservableObject {
             overview = o
             if !o.who.isEmpty { who = o.who }
             lastUpdate = Date()
-            Notifier.shared.check(events: o.events, agents: o.agents)
+            await Notifier.shared.refreshCatchRule(api)
+            Notifier.shared.check(events: o.events, agents: o.agents, ladder: o.ladder)
         }
         let picked = account
         if !picked.isEmpty {

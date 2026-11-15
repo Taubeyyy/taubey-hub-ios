@@ -19,6 +19,18 @@ enum AlertLogic {
         return Array(list.suffix(limit))
     }
 
+    /// A catch is announced by the same rule the server pushes by (agents.js):
+    /// its rarity at or above the floor set under Alerts, or its character on
+    /// the list of names ("Aquella [Slime]" counts as Aquella). Nothing set,
+    /// nothing announced. Other kinds always pass.
+    static func wanted(_ e: HubEvent, floor: String, names: [String], ladder: [String]) -> Bool {
+        guard e.kind == "catch" else { return true }
+        let who = e.title.replacingOccurrences(of: #"\s*\[[^\]]*\]\s*$"#, with: "", options: .regularExpression).lowercased()
+        if names.contains(where: { $0.lowercased() == who }) { return true }
+        guard !floor.isEmpty, let bar = ladder.firstIndex(of: floor), let rank = ladder.firstIndex(of: e.detail) else { return false }
+        return rank >= bar
+    }
+
     /// The newest event time, so the next look starts after it.
     static func newest(_ events: [HubEvent], after since: Date) -> Date {
         events.map { $0.at }.reduce(since) { max($0, $1) }

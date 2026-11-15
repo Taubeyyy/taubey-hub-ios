@@ -29,6 +29,22 @@ final class Notifier: ObservableObject {
     private let defaults = UserDefaults.standard
     private let sinceKey = "notify.since"
     private let onlineKey = "notify.online"
+    /// The catch rule from the server's Alerts settings, kept for the
+    /// background look; read again at most every five minutes.
+    private let floorKey = "notify.catchFloor"
+    private let namesKey = "notify.catchNames"
+    private var rulesAt: Date?
+
+    func rememberCatchRule(_ s: AlertSettings) {
+        defaults.set(s.catches, forKey: floorKey)
+        defaults.set(s.catchNames, forKey: namesKey)
+        rulesAt = Date()
+    }
+
+    func refreshCatchRule(_ api: HubAPI) async {
+        if let at = rulesAt, Date().timeIntervalSince(at) < 300 { return }
+        if let answer = try? await api.get("/api/alerts") { rememberCatchRule(AlertSettings(answer)) }
+    }
 
     var kinds: Set<String> {
         var out = Set<String>()
@@ -95,13 +111,16 @@ final class Notifier: ObservableObject {
 
     /// One look: new events since the last one, and instances that dropped
     /// off. The first look ever only sets the markers.
-    func check(events: [HubEvent], agents: [Agent]?) {
+    func check(events: [HubEvent], agents: [Agent]?, ladder: [String] = []) {
         let first = defaults.object(forKey: sinceKey) == nil
         let since = Date(timeIntervalSince1970: defaults.double(forKey: sinceKey))
         // with real push the server has said it already; the markers still move
         let quiet = first || pushActive
         if !quiet {
-            for e in AlertLogic.fresh(events, since: since, kinds: kinds) {
+            let floor = defaults.string(forKey: floorKey) ?? ""
+            let names = defaults.stringArray(forKey: namesKey) ?? []
+            let wanted = events.filter { AlertLogic.wanted($0, floor: floor, names: names, ladder: ladder) }
+            for e in AlertLogic.fresh(wanted, since: since, kinds: kinds) {
                 let t = AlertLogic.text(for: e)
                 post(id: "ev-\(e.id)", title: t.title, body: t.body, urgent: e.kind == "trouble")
             }
@@ -143,9 +162,10 @@ final class Notifier: ObservableObject {
         scheduleRefresh()
         guard let session = Vault.read() else { return }
         let api = HubAPI(session: session)
+        await refreshCatchRule(api)
         let events = (try? await api.events(kind: "")) ?? []
-        let agents = try? await api.overview(range: "session").agents
-        check(events: events, agents: agents)
+        let overview = try? await api.overview(range: "session")
+        check(events: events, agents: overview?.agents, ladder: overview?.ladder ?? [])
     }
 }
 

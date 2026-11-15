@@ -24,7 +24,7 @@ struct OverviewView: View {
                     }
                     if let error = store.error { ErrorBanner(text: error) }
                     if let o = store.shown {
-                        hero(o).appear(0)
+                        tiles(o).appear(0)
                         if let next = o.nextRebirth { rebirth(next).appear(1) }
                         chart.appear(2)
                         rarities(o).appear(3)
@@ -59,60 +59,27 @@ struct OverviewView: View {
         if let p = await store.call({ try await store.api.history(metric: m, hours: h, account: a) }) { points = p }
     }
 
-    // MARK: the hero - what the farm earns, at a glance
+    // MARK: the tiles - the dashboard's eight, in the same order
 
-    private func hero(_ o: Overview) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Text("CASH PRO SEKUNDE").font(.system(size: 10.5, weight: .bold)).kerning(1).foregroundColor(Theme.faint)
-                Spacer()
-                HStack(spacing: 6) {
-                    StatusDot(online: o.online > 0)
-                    Text(o.online == o.total ? "\(o.online) / \(o.total) online" : "\(o.total - o.online) offline")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(o.online == o.total ? Theme.good : Theme.warn)
-                }
-                .padding(.horizontal, 10).padding(.vertical, 5)
-                .background(Color.white.opacity(0.05))
-                .clipShape(Capsule())
-            }
-            Text(Format.number(o.cashPerSec))
-                .font(.system(size: 46, weight: .heavy, design: .rounded))
-                .kerning(-1)
-                .foregroundColor(Theme.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .contentTransition(.numericText())
-                .animation(.easeOut(duration: 0.4), value: o.cashPerSec)
-                .padding(.top, 8)
-            Text("\(Format.number(o.cashPerSec * 3600)) pro Stunde · \(Format.number(o.cash)) auf dem Konto")
-                .font(.system(size: 13)).foregroundColor(Theme.muted)
-                .lineLimit(1).minimumScaleFactor(0.8)
-            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
-            FigureRow(items: [
-                ("Gems", Format.number(o.gems)),
-                ("Gems / min", Format.number(o.gemsPerMin)),
-                ("Futter", Format.number(o.food)),
-            ])
-            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 12)
-            FigureRow(items: [
-                ("Fänge / min", Format.number(o.catchesPerMin)),
-                ("Fänge", Format.number(o.catches)),
-                ("Rebirths", Format.number(o.rebirths)),
-            ])
-            if o.cashEarned > 0 || o.gemsEarned > 0 {
-                Text("Insgesamt verdient: \(Format.number(o.cashEarned)) Cash · \(Format.number(o.gemsEarned)) Gems")
-                    .font(.system(size: 12)).foregroundColor(Theme.faint)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-                    .padding(.top, 12)
-            }
+    private func tiles(_ o: Overview) -> some View {
+        let n = Format.number
+        let held = "auf \(o.total) Instanz\(o.total == 1 ? "" : "en")"
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            OnlineTile(online: o.online, total: o.total)
+            Tile(caption: "Cash", value: n(o.cash), icon: "banknote",
+                 sub: o.cashEarned > 0 ? "\(n(o.cashEarned)) insgesamt" : held)
+            Tile(caption: "Cash / Sek", value: n(o.cashPerSec), icon: "bolt.fill",
+                 sub: "\(n(o.cashPerSec * 3600)) pro Stunde", subTint: Theme.good)
+            Tile(caption: "Gems", value: n(o.gems), icon: "diamond",
+                 sub: o.gemsEarned > 0 ? "\(n(o.gemsEarned)) insgesamt" : held)
+            Tile(caption: "Gems / Min", value: n(o.gemsPerMin), icon: "diamond.fill",
+                 sub: "\(n(o.gemsPerMin * 60)) pro Stunde", subTint: Theme.good)
+            Tile(caption: "Fänge", value: n(o.catches), icon: "fish",
+                 sub: "\(n(o.catchesPerMin)) pro Minute" + (o.casts > 0 ? " · \(n(o.casts)) Würfe" : ""), subTint: Theme.good)
+            Tile(caption: "Rebirths", value: n(o.rebirths), icon: "arrow.triangle.2.circlepath",
+                 sub: o.nextRebirth.map { $0.short <= 0 ? "nächster: jetzt bereit" : "nächster in \(Format.duration($0.eta))" } ?? "alle Accounts")
+            Tile(caption: "Futter", value: n(o.food), icon: "leaf", sub: "alle Accounts")
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RadialGradient(colors: [Theme.accent.opacity(0.28), .clear], center: .topTrailing, startRadius: 0, endRadius: 260)
-        )
-        .cardSurface(radius: 18)
     }
 
     // MARK: sections
@@ -133,7 +100,7 @@ struct OverviewView: View {
             }
             if next.cost > 0 {
                 FillBar(fraction: CGFloat(1 - next.short / next.cost),
-                        fill: LinearGradient(colors: [Theme.accent, Color(hex: 0xB49CFF)], startPoint: .leading, endPoint: .trailing),
+                        fill: LinearGradient(colors: [Theme.accent, Theme.accent2], startPoint: .leading, endPoint: .trailing),
                         glow: Theme.accent)
             }
         }
@@ -145,7 +112,7 @@ struct OverviewView: View {
     }
 
     private var chart: some View {
-        Card(title: "Verlauf", icon: "chart.xyaxis.line") {
+        Card(title: "Farm-Leistung", icon: "chart.xyaxis.line") {
             SegPicker(selection: $metric, options: [("cash", "Cash"), ("gems", "Gems"), ("catches", "Fänge")])
 
             if points.isEmpty || points.allSatisfy({ $0.value == 0 }) {

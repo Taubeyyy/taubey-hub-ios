@@ -298,18 +298,22 @@ struct Card<Content: View>: View {
     }
 }
 
+/// One of the dashboard's tiles: a small caption with its icon, the number
+/// big, a line under it (its number part tinted when `subTint` is set).
 struct Tile: View {
     let caption: String
     let value: String
     var icon: String? = nil
     var sub: String? = nil
     var tint: Color = Theme.text
+    var subTint: Color? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
                 if let icon = icon { Image(systemName: icon).font(.system(size: 11, weight: .bold)) }
                 Text(caption.uppercased()).font(.system(size: 10.5, weight: .bold)).kerning(1)
+                    .lineLimit(1).minimumScaleFactor(0.8)
             }
             .foregroundColor(Theme.faint)
             Text(value)
@@ -322,12 +326,41 @@ struct Tile: View {
                 .animation(.easeOut(duration: 0.4), value: value)
                 .padding(.top, 9)
             if let sub = sub {
-                Text(sub).font(.system(size: 11.5)).foregroundColor(Theme.faint).lineLimit(1).padding(.top, 5)
+                subLine(sub).font(.system(size: 11.5)).lineLimit(1).minimumScaleFactor(0.8).padding(.top, 5)
             }
         }
         .padding(15)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 108, alignment: .topLeading)
         .cardSurface()
+    }
+
+    /// "518B pro Stunde": the number in the tint, the words faint
+    private func subLine(_ s: String) -> Text {
+        guard let tint = subTint, let space = s.firstIndex(of: " ") else { return Text(s).foregroundColor(Theme.faint) }
+        return Text(s[..<space]).foregroundColor(tint).fontWeight(.bold) + Text(s[space...]).foregroundColor(Theme.faint)
+    }
+}
+
+/// The dashboard's first tile: how many instances report, with the ring.
+struct OnlineTile: View {
+    let online: Int
+    let total: Int
+
+    var body: some View {
+        let share = total > 0 ? Double(online) / Double(total) : 0
+        Tile(caption: "Online", value: "\(online) / \(total)", icon: "dot.radiowaves.left.and.right",
+             sub: total > 0 ? "\(Int((share * 100).rounded()))% melden sich" : "noch nichts verbunden", subTint: Theme.good)
+            .overlay(alignment: .topTrailing) {
+                ZStack {
+                    Circle().stroke(Color.white.opacity(0.07), lineWidth: 4.5)
+                    Circle().trim(from: 0, to: share)
+                        .stroke(Theme.good, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1), value: share)
+                }
+                .frame(width: 34, height: 34)
+                .padding(14)
+            }
     }
 }
 

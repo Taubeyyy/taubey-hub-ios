@@ -103,7 +103,10 @@ struct PushSection: View {
     }
 
     private func load() async {
-        if let answer = try? await store.api.get("/api/alerts") { settings = AlertSettings(answer) }
+        if let answer = try? await store.api.get("/api/alerts") {
+            settings = AlertSettings(answer)
+            Notifier.shared.rememberCatchRule(settings)
+        }
     }
 
     private func test() async {

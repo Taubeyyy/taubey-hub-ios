@@ -166,6 +166,19 @@ let alertSettings = AlertSettings(json("{\"ok\":true,\"alerts\":{\"trouble\":fal
 check(!alertSettings.trouble && alertSettings.silent && !alertSettings.back && alertSettings.catches == "God", "alert settings read")
 check(alertSettings.appPush && alertSettings.appDevices == 2, "apns state read")
 check(AlertSettings(Demo.answer("/api/alerts")).appPush, "demo alerts")
+check(AlertSettings(json("{\"alerts\":{\"catches\":\"\",\"catchNames\":[\"AI Hoshi\"]}}")).catchNames == ["AI Hoshi"], "catch names read")
+
+// a catch is announced by the server's rule: the floor set under Alerts, or a watched name
+let tiers = ["Common", "Rare", "Divine", "God", "Apex"]
+func catchEvent(_ title: String, _ rarity: String) -> HubEvent {
+    HubEvent(json("{\"at\":1763200000,\"kind\":\"catch\",\"title\":\"\(title)\",\"detail\":\"\(rarity)\"}"))!
+}
+check(!AlertLogic.wanted(catchEvent("Rubie Hoshi [Electric]", "Divine"), floor: "God", names: [], ladder: tiers), "divine below a god floor")
+check(AlertLogic.wanted(catchEvent("AI Hoshi", "God"), floor: "God", names: [], ladder: tiers), "god at a god floor")
+check(AlertLogic.wanted(catchEvent("Kaito", "Apex"), floor: "God", names: [], ladder: tiers), "apex above a god floor")
+check(AlertLogic.wanted(catchEvent("Aquella [Slime]", "Rare"), floor: "God", names: ["aquella"], ladder: tiers), "watched name, any mutation")
+check(!AlertLogic.wanted(catchEvent("AI Hoshi", "God"), floor: "", names: [], ladder: tiers), "nothing set, nothing said")
+check(AlertLogic.wanted(HubEvent(json("{\"at\":1763200000,\"kind\":\"trouble\",\"title\":\"x\"}"))!, floor: "", names: [], ladder: tiers), "trouble always")
 
 // MARK: German for what the script says
 check(Lingo.label("Next rebirth") == "Nächster Rebirth" && Lingo.label("Whatever") == "Whatever", "labels")

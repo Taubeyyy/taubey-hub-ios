@@ -37,6 +37,8 @@ struct AlertSettings: Equatable {
     var back = true
     var summary = true
     var catches = ""
+    /// characters announced whatever their rarity
+    var catchNames: [String] = []
     var appPush = false
     var appDevices = 0
 
@@ -49,6 +51,7 @@ struct AlertSettings: Equatable {
         back = a["back"].bool ?? true
         summary = a["summary"].bool ?? true
         catches = a["catches"].string ?? ""
+        catchNames = a["catchNames"].strings
         appPush = j["apns"]["available"].bool ?? false
         appDevices = j["apns"]["devices"].int ?? 0
     }
