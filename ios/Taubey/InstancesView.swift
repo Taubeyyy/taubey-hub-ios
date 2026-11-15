@@ -269,9 +269,15 @@ struct InstanceDetailView: View {
                 .padding(.top, 6)
             Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
             FigureRow(items: [
-                ("Fänge / min", Format.number(agent.metric("catchesPerMin"))),
                 ("Cash", Format.number(agent.metric("cash"))),
+                ("Gems", Format.number(agent.metric("gems"))),
                 ("Rebirths", Format.number(agent.metric("rebirths"))),
+            ])
+            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 12)
+            FigureRow(items: [
+                ("Fänge / min", Format.number(agent.metric("catchesPerMin"))),
+                ("Gems / min", Format.number(agent.metric("gemsPerMin"))),
+                ("Futter", Format.number(agent.metric("food"))),
             ])
         }
         .padding(18)
@@ -318,17 +324,34 @@ struct InstanceDetailView: View {
 
     private var stats: some View {
         Card(title: "Was das Script meldet", icon: "text.alignleft") {
-            let lines = agent.statLines + (agent.metrics["rod"]?.string.map { [("Rod", $0)] } ?? [])
-            if lines.isEmpty {
+            // the script's own lines, then every other value it sends - nothing dropped
+            let lines = agent.statLines.map { (Lingo.label($0.0), Lingo.value($0.1)) } + agent.extraLines
+            let rarities = agent.rarityCounts
+            if lines.isEmpty && rarities.isEmpty {
                 Text("Noch nichts gemeldet.").font(.system(size: 14)).foregroundColor(Theme.muted)
             } else {
                 VStack(spacing: 8) {
                     ForEach(lines.indices, id: \.self) { i in
                         HStack(alignment: .top) {
-                            Text(Lingo.label(lines[i].0)).font(.system(size: 14)).foregroundColor(Theme.muted)
+                            Text(lines[i].0).font(.system(size: 14)).foregroundColor(Theme.muted)
                             Spacer(minLength: 12)
-                            Text(Lingo.value(lines[i].1)).font(.system(size: 14, weight: .medium)).foregroundColor(Theme.text)
+                            Text(lines[i].1).font(.system(size: 14, weight: .medium)).foregroundColor(Theme.text)
                                 .multilineTextAlignment(.trailing)
+                        }
+                    }
+                    if !rarities.isEmpty {
+                        Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 4)
+                        HStack(alignment: .top) {
+                            Text("Fänge nach Seltenheit").font(.system(size: 14)).foregroundColor(Theme.muted)
+                            Spacer(minLength: 12)
+                        }
+                        ForEach(rarities) { r in
+                            HStack {
+                                RarityText(name: r.name, size: 14)
+                                Spacer(minLength: 12)
+                                Text(Format.number(r.count)).font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Theme.text)
+                            }
                         }
                     }
                 }

@@ -90,10 +90,22 @@ struct OverviewView: View {
                 .lineLimit(1).minimumScaleFactor(0.8)
             Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 16)
             FigureRow(items: [
-                ("Fänge / min", Format.number(o.catchesPerMin)),
+                ("Gems", Format.number(o.gems)),
                 ("Gems / min", Format.number(o.gemsPerMin)),
-                store.account.isEmpty ? ("Fänge", Format.number(o.catches)) : ("Rebirths", Format.number(o.rebirths)),
+                ("Futter", Format.number(o.food)),
             ])
+            Rectangle().fill(Theme.line).frame(height: 1).padding(.vertical, 12)
+            FigureRow(items: [
+                ("Fänge / min", Format.number(o.catchesPerMin)),
+                ("Fänge", Format.number(o.catches)),
+                ("Rebirths", Format.number(o.rebirths)),
+            ])
+            if o.cashEarned > 0 || o.gemsEarned > 0 {
+                Text("Insgesamt verdient: \(Format.number(o.cashEarned)) Cash · \(Format.number(o.gemsEarned)) Gems")
+                    .font(.system(size: 12)).foregroundColor(Theme.faint)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                    .padding(.top, 12)
+            }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)

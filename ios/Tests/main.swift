@@ -130,6 +130,18 @@ check(AlertLogic.wentOffline(previous: [], agents: agentsNow).isEmpty, "nothing 
 let demoOverview = Overview(Demo.answer("/api/overview?range=session"))
 check(demoOverview.agents.count == 2 && demoOverview.events.count == 5, "demo overview got \(demoOverview.agents.count)/\(demoOverview.events.count)")
 check(Overview(Demo.answer("/api/overview?range=session&account=Alt")).agents.count == 1, "demo account filter")
+// nothing the script reports is dropped: gems and food in the totals, every
+// metric either in the script's own lines or in the extra ones, never twice
+check(demoOverview.food > 0 && demoOverview.gemsEarned > 0, "totals carry food and earned gems")
+if let main = demoOverview.agents.first(where: { $0.account == "Taubeyyyy" }) {
+    let extra = main.extraLines.map { $0.0 }
+    check(main.statLines.contains { $0.0 == "Gems" }, "gems line")
+    check(extra.contains("Cash insgesamt verdient") && extra.contains("Rute") && extra.contains("Würfe"), "extra lines: \(extra)")
+    check(!extra.contains("Cash") && !extra.contains("Gems"), "no value twice: \(extra)")
+    check(main.rarityCounts.first?.name == "God", "rarities best first")
+} else {
+    check(false, "demo main agent")
+}
 check(Inventory(Demo.answer("/api/inventory")).rows.count == 2, "demo inventory")
 check(Schema(Demo.answer("/api/game/x/schema")["schema"])?.tabs.count == 4, "demo schema")
 check(parseHistory(Demo.answer("/api/history?metric=cash")).count == 48, "demo history")

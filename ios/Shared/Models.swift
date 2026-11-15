@@ -45,7 +45,7 @@ struct Agent: Identifiable, Hashable {
 
     /// The readable lines the script sends, in the order its overlay uses.
     var statLines: [(String, String)] {
-        let order = ["Runtime", "Cash/s", "Gems/min", "Casts/min", "Catches", "Cash", "Food", "Rebirths",
+        let order = ["Runtime", "Cash/s", "Gems/min", "Casts/min", "Catches", "Cash", "Gems", "Food", "Rebirths",
                      "Next rebirth", "Next rod", "Fishing", "Feeding"]
         var out: [(String, String)] = []
         var used = Set<String>(["note", "paused"])
@@ -54,6 +54,52 @@ struct Agent: Identifiable, Hashable {
         }
         for key in stats.keys.sorted() where !used.contains(key) {
             if let v = stats[key]?.string { out.append((key, v)) }
+        }
+        return out
+    }
+
+    /// Every number the script reports that its own lines do not already
+    /// show - nothing it sends is dropped. Labels in German, values formatted.
+    var extraLines: [(String, String)] {
+        let shown = Set(statLines.map { $0.0 })
+        // metric key, German label, the stat line that already covers it
+        let known: [(String, String, String?)] = [
+            ("cash", "Cash", "Cash"), ("gems", "Gems", "Gems"), ("food", "Futter", "Food"),
+            ("rebirths", "Rebirths", "Rebirths"), ("rebirthCost", "Nächster Rebirth kostet", nil),
+            ("cashEarned", "Cash insgesamt verdient", nil), ("gemsEarned", "Gems insgesamt verdient", nil),
+            ("cashPerSec", "Cash pro Sekunde", "Cash/s"), ("gemsPerMin", "Gems pro Minute", "Gems/min"),
+            ("catches", "Fänge", "Catches"), ("casts", "Würfe", nil), ("catchesPerMin", "Fänge pro Minute", nil),
+            ("rod", "Rute", "Next rod"), ("runtime", "Laufzeit", "Runtime"),
+        ]
+        var out: [(String, String)] = []
+        var used = Set<String>(["paused", "fishing", "rarities", "ladder"])
+        for (key, label, line) in known {
+            used.insert(key)
+            if let line = line, shown.contains(line), key != "rod" { continue }
+            guard let v = metrics[key] else { continue }
+            if let n = v.double {
+                out.append((label, key == "runtime" ? Format.duration(n) : Format.number(n)))
+            } else if let s = v.string, !s.isEmpty {
+                out.append((label, s))
+            }
+        }
+        for key in metrics.keys.sorted() where !used.contains(key) {
+            if let n = metrics[key]?.double { out.append((key, Format.number(n))) }
+            else if let s = metrics[key]?.string, !s.isEmpty { out.append((key, s)) }
+            else if let b = metrics[key]?.bool { out.append((key, b ? "ja" : "nein")) }
+        }
+        return out
+    }
+
+    /// This run's catches by rarity, best first.
+    var rarityCounts: [RarityCount] {
+        let ladder = metrics["ladder"]?.strings ?? []
+        var counts: [String: Double] = [:]
+        for (k, v) in metrics["rarities"]?.object ?? [:] { if let n = v.double, n > 0 { counts[k] = n } }
+        var out: [RarityCount] = []
+        for name in ladder.reversed() { if let n = counts[name] { out.append(RarityCount(name: name, count: n)) } }
+        for (name, n) in counts.sorted(by: { $0.key < $1.key }) where !ladder.contains(name) {
+            out.append(RarityCount(name: name, count: n))
         }
         return out
     }
@@ -113,6 +159,10 @@ struct Overview {
     let gemsPerMin: Double
     let catches: Double
     let catchesPerMin: Double
+    let casts: Double
+    let food: Double
+    let cashEarned: Double
+    let gemsEarned: Double
     let rebirths: Double
     let nextRebirth: NextRebirth?
     let rarities: [String: Double]
@@ -132,6 +182,10 @@ struct Overview {
         gemsPerMin = t["gemsPerMin"].double ?? 0
         catches = t["catches"].double ?? 0
         catchesPerMin = t["catchesPerMin"].double ?? 0
+        casts = t["casts"].double ?? 0
+        food = t["food"].double ?? 0
+        cashEarned = t["cashEarned"].double ?? 0
+        gemsEarned = t["gemsEarned"].double ?? 0
         rebirths = t["rebirths"].double ?? 0
         nextRebirth = NextRebirth(t["nextRebirth"])
         var r: [String: Double] = [:]

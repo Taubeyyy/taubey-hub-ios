@@ -73,27 +73,32 @@ enum Demo {
         let main = """
         {"id":"1|taubeyyyy|fish an anime rng","account":"Taubeyyyy","game":"Fish an Anime RNG","group":"",
          "stats":{"note":"hooked - Divine","Runtime":"6h 12m","Cash/s":"113Qa","Gems/min":"6.79K","Casts/min":"39.9","Catches":"8.2K",
-                  "Cash":"206Qi","Food":"2.55B","Rebirths":"193","Next rebirth":"34m 46s  (236Qi short)","Next rod":"all bought","paused":false},
+                  "Cash":"206Qi","Gems":"3.42M","Food":"2.55B","Rebirths":"193","Next rebirth":"34m 46s  (236Qi short)","Next rod":"all bought","paused":false},
          "metrics":{"cashPerSec":113170867251891070,"catchesPerMin":277.2,"gemsPerMin":6785.8,"cash":206123101412664670000,
-                    "gems":3415098,"rebirths":193,"catches":8213,"rod":"Rod of the Heavens","paused":false,"rebirthCost":286791049603165450000},
+                    "gems":3415098,"rebirths":193,"catches":8213,"rod":"Rod of the Heavens","paused":false,"rebirthCost":286791049603165450000,
+                    "food":2550000000,"casts":8950,"cashEarned":912000000000000000000,"gemsEarned":48200000,"runtime":22320,
+                    "rarities":{"Common":512,"Rare":388,"Epic":240,"Legendary":170,"Divine":31,"God":1},
+                    "ladder":["Common","Uncommon","Rare","Epic","Legendary","Mythical","Cosmic","Secret","Rainbow","Ascended",
+                              "Divine","Supreme","Celestial","Ancient","God","Omniscient","Apex","Transcendent","Exclusive"]},
          "overrides":3,"pending":0,"age":4,"uptime":22320,"online":true}
         """
         let alt = """
         {"id":"1|alt|fish an anime rng","account":"Alt","game":"Fish an Anime RNG","group":"",
          "stats":{"note":"feeding","Runtime":"2d 3h","Cash/s":"1.2Qa","Catches":"41K","Rebirths":"88","paused":false},
          "metrics":{"cashPerSec":1200000000000000,"catchesPerMin":204.5,"gemsPerMin":3100,"cash":9800000000000000000,
-                    "gems":120400,"rebirths":88,"catches":41022,"rod":"Rod of Hell","paused":false},
+                    "gems":120400,"rebirths":88,"catches":41022,"rod":"Rod of Hell","paused":false,"food":96000000,"casts":44100},
          "overrides":0,"pending":1,"age":9,"uptime":184000,"online":true}
         """
         let agents = altOnly ? "[\(alt)]" : "[\(main),\(alt)]"
         let totals = altOnly
             ? """
               {"online":1,"total":1,"cash":9800000000000000000,"gems":120400,"cashPerSec":1200000000000000,"gemsPerMin":3100,
-               "catches":41022,"catchesPerMin":204.5,"rebirths":88,"nextRebirth":null}
+               "catches":41022,"catchesPerMin":204.5,"rebirths":88,"food":96000000,"casts":44100,"nextRebirth":null}
               """
             : """
               {"online":2,"total":2,"cash":206123101412664670000,"gems":3535498,
-               "cashPerSec":114370867251891070,"gemsPerMin":9885.8,"catches":49235,"catchesPerMin":481.7,"rebirths":281,
+               "cashPerSec":114370867251891070,"gemsPerMin":9885.8,"catches":49235,"catchesPerMin":481.7,"rebirths":281,"food":2646000000,"casts":53050,
+               "cashEarned":912000000000000000000,"gemsEarned":48200000,
                "nextRebirth":{"account":"Taubeyyyy","cost":286791049603165450000,"short":80667948190500780000,"eta":713}}
               """
         return """
