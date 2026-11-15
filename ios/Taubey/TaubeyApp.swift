@@ -48,7 +48,8 @@ struct TaubeyApp: App {
             .environmentObject(store)
             .environmentObject(notifier)
             .preferredColorScheme(.dark)
-            .tint(Theme.accent)
+            .tint(Theme.accent2)
+            .toggleStyle(CheckToggleStyle())
         }
         .onChange(of: phase) { now in
             if now == .background && store.signedIn { notifier.scheduleRefresh() }
@@ -101,6 +102,7 @@ struct RootView: View {
         // asks once; afterwards this only reads the answer - then the token
         // for real push, which iOS hands over again on every start
         .task {
+            Heads.shared.api = store.api
             await Notifier.shared.requestPermission()
             Notifier.shared.registerForPush()
         }

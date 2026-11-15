@@ -128,6 +128,19 @@ final class HubAPI {
         return (value, json["name"].string ?? "")
     }
 
+    /// An account's Roblox head (taubey.com/api/head/<name>, the session's own
+    /// accounts only); nil when there is none or nothing could be fetched.
+    func headImage(account: String) async -> Data? {
+        if demo { return nil }
+        guard account.range(of: "^[A-Za-z0-9_]{3,20}$", options: .regularExpression) != nil else { return nil }
+        var r = URLRequest(url: HubAPI.url("/api/head/" + account))
+        r.setValue("TaubeyHub-iOS", forHTTPHeaderField: "User-Agent")
+        if let session = session { r.setValue("panel_session=\(session)", forHTTPHeaderField: "Cookie") }
+        guard let (data, response) = try? await http.data(for: r), let h = response as? HTTPURLResponse,
+              h.statusCode == 200, (h.value(forHTTPHeaderField: "Content-Type") ?? "").hasPrefix("image/") else { return nil }
+        return data
+    }
+
     // MARK: - calls the app makes
 
     /// `account` narrows everything to one Roblox account; empty = all.

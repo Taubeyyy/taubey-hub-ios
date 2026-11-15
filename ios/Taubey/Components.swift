@@ -34,25 +34,56 @@ struct LiveChip: View {
     }
 }
 
-/// A round initial in a colour that belongs to the account name.
+/// The account's Roblox heads, fetched once per launch through the signed-in
+/// session (taubey.com/api/head/<name> answers only for one's own accounts).
+@MainActor
+final class Heads {
+    static let shared = Heads()
+    var api: HubAPI?
+    private var images: [String: UIImage] = [:]
+    private var misses: Set<String> = []
+
+    func image(_ account: String) async -> UIImage? {
+        let key = account.lowercased()
+        if let img = images[key] { return img }
+        guard !misses.contains(key), let api = api else { return nil }
+        guard let data = await api.headImage(account: account), let img = UIImage(data: data) else {
+            misses.insert(key)
+            return nil
+        }
+        images[key] = img
+        return img
+    }
+}
+
+/// The account's Roblox head, as the script menu shows it in its sidebar; the
+/// initial on magenta glass until it has loaded, or when there is none.
 struct Avatar: View {
     let name: String
     var size: CGFloat = 36
     var online: Bool? = nil
     @State private var pulse = false
-
-    private var tint: Color {
-        let sum = name.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
-        return Color(hue: Double(sum % 360) / 360, saturation: 0.55, brightness: 0.95)
-    }
+    @State private var head: UIImage?
 
     var body: some View {
-        Text(String(name.prefix(1)).uppercased())
-            .font(.system(size: size * 0.44, weight: .heavy, design: .rounded))
-            .foregroundColor(.white)
+        ZStack {
+            Text(String(name.prefix(1)).uppercased())
+                .font(.system(size: size * 0.44, weight: .heavy, design: .rounded))
+                .foregroundColor(.white)
+            if let head = head {
+                Image(uiImage: head).resizable().scaledToFill().transition(.opacity)
+            }
+        }
             .frame(width: size, height: size)
-            .background(LinearGradient(colors: [tint, tint.opacity(0.55)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .background(
+                RadialGradient(colors: [Theme.accent2.opacity(0.45), Theme.accent3.opacity(0.35)], center: UnitPoint(x: 0.5, y: 0.7),
+                               startRadius: 0, endRadius: size * 0.75)
+            )
             .clipShape(Circle())
+            .task(id: name) {
+                let img = await Heads.shared.image(name)
+                withAnimation(.easeOut(duration: 0.35)) { head = img }
+            }
             .overlay(Circle().stroke(Color.white.opacity(0.12), lineWidth: 1))
             .overlay(alignment: .bottomTrailing) {
                 if let online = online {
@@ -102,12 +133,16 @@ struct AccountChips: View {
                 if let dot = dot { StatusDot(online: dot) }
                 Text(title).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
             }
-            .foregroundColor(on ? Color(hex: 0x09090B) : Theme.text)
+            .foregroundColor(on ? .white : Theme.text)
             .padding(.horizontal, 14).padding(.vertical, 8)
             .background {
                 ZStack {
                     Capsule().fill(Color.white.opacity(0.05))
-                    if on { Capsule().fill(Theme.text).matchedGeometryEffect(id: "pill", in: pill) }
+                    if on {
+                        Capsule().fill(Theme.accentFill)
+                            .shadow(color: Theme.accent.opacity(0.55), radius: 8, y: 3)
+                            .matchedGeometryEffect(id: "pill", in: pill)
+                    }
                 }
             }
             .overlay(Capsule().stroke(on ? Color.clear : Theme.line2, lineWidth: 1))

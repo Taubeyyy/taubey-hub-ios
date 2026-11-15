@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 extension Color {
     init(hex: UInt32, opacity: Double = 1) {
@@ -10,41 +11,65 @@ extension Color {
     }
 }
 
-/// The web dashboard's tokens (taubey-hub/dashboard.html :root), so the app
-/// and the site are one thing.
+/// Nyra - the look of Taubey UI 2, the script menu, and of the web dashboard
+/// (taubey-hub/dashboard.html :root): magenta on near-black, glass with a
+/// little grain over a flowing tube and soft leaves.
 enum Theme {
-    static let ink = Color(hex: 0x070709)          // --bg
-    static let surface = Color(hex: 0x0E0E12)      // --panel
-    static let raised = Color(hex: 0x15151B)       // --panel-2
-    static let line = Color.white.opacity(0.06)    // --line
-    static let line2 = Color.white.opacity(0.11)   // --line-2
+    static let ink = Color(hex: 0x050507)          // --bg
+    static let surface = Color(hex: 0x121016)      // --panel
+    static let raised = Color(hex: 0x1A171F)       // --panel-2
+    static let line = Color.white.opacity(0.065)   // --line
+    static let line2 = Color.white.opacity(0.12)   // --line-2
     static let outline = line
-    static let text = Color(hex: 0xF4F4F7)         // --text
-    static let muted = Color(hex: 0xA1A1AD)        // --dim
-    static let faint = Color(hex: 0x6B6B78)        // --dim-2
-    static let accent = Color(hex: 0x7C5CFF)       // --accent
-    static let accentSoft = Color(hex: 0x7C5CFF, opacity: 0.14)
-    static let good = Color(hex: 0x2EE6A6)
-    static let warn = Color(hex: 0xFFB547)
-    static let bad = Color(hex: 0xFF5D6C)
+    static let text = Color(hex: 0xF3F2F7)         // --text
+    static let muted = Color(hex: 0xA09FAD)        // --dim
+    static let faint = Color(hex: 0x6E6D7A)        // --dim-2
+    static let accent = Color(hex: 0xC21FB3)       // --accent
+    static let accent2 = Color(hex: 0xEE6AE2)      // --accent2, the light one
+    static let accent3 = Color(hex: 0x7A0B73)      // --accent3, the deep one
+    static let accentSoft = Color(hex: 0xC21FB3, opacity: 0.16)
+    static let good = Color(hex: 0x4ADE80)
+    static let warn = Color(hex: 0xFBBF24)
+    static let bad = Color(hex: 0xF87171)
     static let radius: CGFloat = 14
 
-    // the dashboard's RCOL / RGRAD, so a rarity has the same colour everywhere
+    /// the lit magenta of buttons, pills and ticked boxes
+    static let accentFill = LinearGradient(colors: [Color(hex: 0xD93BCB), Color(hex: 0xA8169A)], startPoint: .top, endPoint: .bottom)
+
+    // The game's own rarity gradients, stop for stop, from the look dump
+    // (taubey-hub/look/fish-anime.json, tools/look-from-dump.py): black
+    // stops left out and the darkest lifted so every tier reads on near-black.
+    // rarityColor is one colour per tier for dots, bars and glows.
     static let rarityColor: [String: UInt32] = [
-        "Common": 0xC4C4C4, "Uncommon": 0x3DFF7E, "Rare": 0x00D4FF, "Epic": 0xC21CFF, "Legendary": 0xFFD200,
-        "Mythical": 0xFF3030, "Cosmic": 0xD024FF, "Secret": 0x8C8CAB, "Rainbow": 0x7DFF1A, "Ascended": 0x8A5CFF,
-        "Divine": 0xF0A33C, "Supreme": 0x33FF4D, "Celestial": 0x8A45FF, "Ancient": 0xFFC000, "God": 0xF01E9A,
-        "Omniscient": 0xFF2020, "Apex": 0x9BE9FF, "Transcendent": 0xFF6A1F, "Exclusive": 0x8A2BFF,
+        "Common": 0xB0B0B0, "Uncommon": 0x69FF99, "Rare": 0x59EEFF, "Epic": 0xE45EFF, "Legendary": 0xFFFF59,
+        "Mythical": 0xFF5356, "Cosmic": 0x9659FF, "Secret": 0x9B9BB3, "Rainbow": 0xFFB15A, "Ascended": 0x59F1FF,
+        "Divine": 0xFFD059, "Supreme": 0x59FF5E, "Celestial": 0x2185FF, "Ancient": 0xFFEC59, "God": 0xFF595C,
+        "Omniscient": 0xFF595C, "Apex": 0x59F7FF, "Transcendent": 0x9C59FF, "Exclusive": 0x8860FF,
     ]
     static let rarityGradient: [String: [UInt32]] = [
-        "Common": [0xA9A9A9, 0xE2E2E2], "Uncommon": [0x3DFF7E, 0xA8FFC6], "Rare": [0x00D4FF, 0x7AF3FF],
-        "Epic": [0xC21CFF, 0xEC8DFF], "Legendary": [0xFFF200, 0xFFB800], "Mythical": [0xFF3030, 0xD4001E],
-        "Cosmic": [0xA51CFF, 0xFF2DF2], "Secret": [0x707090, 0xB3B3CC],
-        "Rainbow": [0xFF6A00, 0xFFD000, 0x7DFF1A, 0x1AE0FF], "Ascended": [0xA52BFF, 0x6D8DFF],
-        "Divine": [0xFFBF00, 0xD47AD0], "Supreme": [0x1F9A10, 0x33FF4D], "Celestial": [0xFF2D2D, 0x6C4BFF, 0xFF38D8],
-        "Ancient": [0xFFE600, 0xFF9800], "God": [0xFF2424, 0xE01CFF], "Omniscient": [0xFF2B2B, 0xC8000F, 0xFF2B2B],
-        "Apex": [0xFFFFFF, 0x7FE8FF, 0xFFD36B, 0xFFFFFF], "Transcendent": [0xE03A0B, 0xFF7A22, 0xFF3D0E],
-        "Exclusive": [0xB21CFF, 0x5A2BFF, 0xB21CFF],
+        "Common": [0xB0B0B0, 0x9C9C9C],
+        "Uncommon": [0x69FF99, 0x69FF99],
+        "Rare": [0x00E5FF, 0x00E5FF],
+        "Epic": [0xD711FF, 0xD711FF],
+        "Legendary": [0xFFFF00, 0xFFFF00],
+        "Mythical": [0xFF2125, 0xFF3A3D],
+        "Cosmic": [0x9355FF, 0xDF05FC, 0xBA32FF],
+        "Secret": [0x8C8CA8, 0x8585A0, 0x8C8CA8, 0x858C9C],
+        "Rainbow": [0xFF6A00, 0xFF8801, 0xFFAA00, 0xFEFF00, 0xA9FF00, 0x54FF00, 0x00FF01, 0x00FF57, 0x00FFAC, 0x00FDFF,
+                    0x00A8FF, 0x499BFF, 0x8595FF, 0xA57BFF, 0xAB57FF, 0xFF4AE7, 0xFF00A6, 0xFF3773, 0xFF6F6F],
+        "Ascended": [0x00EAFF, 0x9C55FF, 0xD400FF, 0x00A8FF, 0x499BFF, 0x8595FF, 0xA57BFF, 0xAB57FF, 0xFF4AE7, 0xFF00A6,
+                     0xB347FF, 0xA14EFF],
+        "Divine": [0xFFB700, 0xFFD93F, 0xBA32FF],
+        "Supreme": [0x23FF14, 0x3CFF42, 0x34FF26, 0x00FF08],
+        "Celestial": [0xFF0004, 0x2185FF, 0xFA44E3, 0xFF0004],
+        "Ancient": [0xFFE100, 0xFF8800, 0xFFE14C, 0xF2FF00, 0xFFB200, 0xFFFF00, 0xFFB200, 0xFFE100],
+        "God": [0xFF0004, 0xFF399F, 0xC226FF, 0xFF00B3],
+        "Omniscient": [0xFF0004, 0xFF2528, 0xFF3D4B, 0xFF272B, 0xFF272E, 0xFF3336, 0xFF2124, 0xFF3A3D, 0xFF222A, 0xFF3B3F, 0xFF2024],
+        "Apex": [0x00F2FF, 0x00DDFF, 0x8A5CFF, 0x696BFF, 0x00EAFF, 0x37FBFF, 0x2F78FF, 0x00F2FF, 0x00FFFF, 0x696BFF,
+                 0x1D78FF, 0x636DFF, 0x00D0FF],
+        "Transcendent": [0x9955FF, 0x8863FF, 0xC226FF, 0xA14EFF, 0xC330FE, 0xC336FF, 0x8E61FF, 0x8560FF, 0xB93FFF,
+                         0xA74EFF, 0x9E4EFF, 0xB247FF, 0x7369FF, 0xA74EFF, 0xA947FF],
+        "Exclusive": [0xFF6AE6, 0xC93FFF, 0x6A63FF, 0xFF00D4],
     ]
 
     static func color(rarity: String) -> Color {
@@ -62,48 +87,145 @@ enum Theme {
     }
 }
 
-// MARK: - the website's ambience: slow drifting light over a faint grid
+// MARK: - the background: soft leaves and the flowing tube, nothing else
 
 struct Ambience: View {
+    @Environment(\.accessibilityReduceMotion) private var still
     @State private var drift = false
 
     var body: some View {
         GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
             ZStack {
                 Theme.ink
-                Circle()
-                    .fill(Theme.accent.opacity(0.22))
-                    .frame(width: 420, height: 420)
-                    .blur(radius: 90)
-                    .offset(x: drift ? -geo.size.width * 0.05 : -geo.size.width * 0.3, y: drift ? -geo.size.height * 0.32 : -geo.size.height * 0.44)
-                    .animation(.easeInOut(duration: 26).repeatForever(autoreverses: true), value: drift)
-                Circle()
-                    .fill(Theme.good.opacity(0.09))
-                    .frame(width: 380, height: 380)
-                    .blur(radius: 90)
-                    .offset(x: drift ? geo.size.width * 0.2 : geo.size.width * 0.42, y: drift ? geo.size.height * 0.3 : geo.size.height * 0.45)
-                    .animation(.easeInOut(duration: 32).repeatForever(autoreverses: true), value: drift)
-                GridLines()
-                    .stroke(Theme.line, lineWidth: 1)
-                    .mask(RadialGradient(colors: [.black, .clear], center: .top, startRadius: 0, endRadius: geo.size.height * 0.7))
-                    .opacity(0.6)
+                RadialGradient(colors: [Theme.accent.opacity(0.12), .clear], center: UnitPoint(x: 0.8, y: -0.05),
+                               startRadius: 0, endRadius: max(w, h) * 0.8)
+                Leaf()
+                    .frame(width: w * 1.25, height: w * 0.62)
+                    .rotationEffect(.degrees(drift ? -8 : -22))
+                    .offset(x: w * (drift ? 0.3 : 0.38), y: -h * (drift ? 0.34 : 0.4))
+                    .opacity(0.5)
+                    .animation(still ? nil : .easeInOut(duration: 19).repeatForever(autoreverses: true), value: drift)
+                Leaf()
+                    .frame(width: w * 1.05, height: w * 0.52)
+                    .rotationEffect(.degrees(drift ? 40 : 28))
+                    .offset(x: -w * (drift ? 0.3 : 0.4), y: h * (drift ? 0.36 : 0.42))
+                    .opacity(0.4)
+                    .animation(still ? nil : .easeInOut(duration: 23).repeatForever(autoreverses: true), value: drift)
+                Tube(still: still)
+                    .frame(width: w, height: h)
+                    .opacity(0.42)
             }
+            .frame(width: w, height: h)
+            .clipped()
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .onAppear { drift = true }
     }
+}
 
-    private struct GridLines: Shape {
-        func path(in rect: CGRect) -> Path {
-            var p = Path()
-            let step: CGFloat = 44
-            var x: CGFloat = 0
-            while x <= rect.width { p.move(to: CGPoint(x: x, y: 0)); p.addLine(to: CGPoint(x: x, y: rect.height)); x += step }
-            var y: CGFloat = 0
-            while y <= rect.height { p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: rect.width, y: y)); y += step }
-            return p
+/// One of Nyra's leaves: pointed at both ends, magenta, out of focus.
+struct Leaf: View {
+    var body: some View {
+        LeafShape()
+            .fill(LinearGradient(colors: [Theme.accent2, Theme.accent, Theme.accent3], startPoint: .top, endPoint: .bottom))
+            .blur(radius: 34)
+    }
+}
+
+struct LeafShape: Shape {
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        let mid = CGPoint(x: r.minX, y: r.midY), end = CGPoint(x: r.maxX, y: r.midY)
+        p.move(to: mid)
+        p.addCurve(to: end, control1: CGPoint(x: r.minX + r.width * 0.19, y: r.minY + r.height * 0.06),
+                   control2: CGPoint(x: r.maxX - r.width * 0.19, y: r.minY + r.height * 0.06))
+        p.addCurve(to: mid, control1: CGPoint(x: r.maxX - r.width * 0.19, y: r.maxY - r.height * 0.06),
+                   control2: CGPoint(x: r.minX + r.width * 0.19, y: r.maxY - r.height * 0.06))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// The website's glossy tube. Drawn once, two screens wide with a bend that
+/// repeats every screen, and slid sideways forever - so the phone only moves
+/// a finished picture and never redraws it.
+struct Tube: View {
+    var still = false
+    @State private var flow = false
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width, h = geo.size.height
+            Canvas { ctx, size in
+                let t = min(h, 900) * 0.05
+                func line(_ dy: CGFloat) -> Path {
+                    var p = Path()
+                    let steps = 180
+                    for i in 0...steps {
+                        let x = CGFloat(i) / CGFloat(steps) * size.width
+                        let y = h * 0.64 + h * 0.13 * sin(2 * .pi * x / w + 2.4) + dy
+                        if i == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
+                    }
+                    return p
+                }
+                func stroke(_ dy: CGFloat, _ width: CGFloat, _ color: Color, blur: CGFloat) {
+                    ctx.drawLayer { layer in
+                        if blur > 0 { layer.addFilter(.blur(radius: blur)) }
+                        layer.stroke(line(dy), with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round))
+                    }
+                }
+                // halo, then the tube from its dark underside to the shine on top
+                stroke(0, t * 4.4, Color(hex: 0xEB38D6, opacity: 0.22), blur: t * 1.3)
+                stroke(0, t * 2, Color(hex: 0x4E0748), blur: 0)
+                stroke(-t * 0.12, t * 1.72, Color(hex: 0x8E0E84), blur: t * 0.12)
+                stroke(-t * 0.3, t * 1.2, Color(hex: 0xC824B8), blur: t * 0.22)
+                stroke(-t * 0.5, t * 0.62, Color(hex: 0xF07FE4), blur: t * 0.2)
+                stroke(-t * 0.64, t * 0.2, Color.white.opacity(0.85), blur: t * 0.08)
+            }
+            .frame(width: w * 2, height: h)
+            .drawingGroup()
+            .offset(x: flow ? -w : 0)
+            .animation(still ? nil : .linear(duration: 34).repeatForever(autoreverses: false), value: flow)
+            .onAppear { flow = true }
         }
+    }
+}
+
+// MARK: - grain: only on the glass that lies over the background
+
+enum GrainTile {
+    /// 128 x 128 light and dark specks, made once.
+    static let image: UIImage = {
+        let n = 128
+        var bytes = [UInt8](repeating: 0, count: n * n * 4)
+        var seed: UInt32 = 1337
+        for i in 0..<(n * n) {
+            seed = seed &* 1_664_525 &+ 1_013_904_223
+            let v = Double(seed >> 8) / Double(1 << 24)
+            let light = v >= 0.5
+            let a = light ? (v - 0.5) * 0.36 : (0.5 - v) * 0.5
+            let c = UInt8(light ? 255 * a : 0)   // premultiplied
+            bytes[i * 4] = c; bytes[i * 4 + 1] = c; bytes[i * 4 + 2] = c
+            bytes[i * 4 + 3] = UInt8(255 * a)
+        }
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+        guard let provider = CGDataProvider(data: Data(bytes) as CFData),
+              let cg = CGImage(width: n, height: n, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: n * 4, space: space,
+                               bitmapInfo: info, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        else { return UIImage() }
+        return UIImage(cgImage: cg, scale: 2, orientation: .up)
+    }()
+}
+
+struct Grain: View {
+    var body: some View {
+        Image(uiImage: GrainTile.image)
+            .resizable(resizingMode: .tile)
+            .opacity(0.55)
+            .allowsHitTesting(false)
     }
 }
 
@@ -112,20 +234,39 @@ extension View {
         self.background(Ambience())
     }
 
-    /// The card surface: a breath of white from the top, a hairline edge.
-    func cardSurface(radius: CGFloat = Theme.radius) -> some View {
+    /// The card surface: frosted glass over the background - blurred, a dark
+    /// tint, a breath of white from the top, a lit hairline edge, the grain.
+    /// `glass: false` for grids of many, where a blur each costs more than it
+    /// shows.
+    func cardSurface(radius: CGFloat = Theme.radius, glass: Bool = true) -> some View {
         self
-            .background(
-                LinearGradient(colors: [Color.white.opacity(0.035), Color.white.opacity(0.012)], startPoint: .top, endPoint: .bottom)
-                    .background(Theme.surface.opacity(0.72))
+            .background {
+                ZStack {
+                    if glass { Rectangle().fill(.ultraThinMaterial) }
+                    Theme.surface.opacity(glass ? 0.55 : 0.84)
+                    LinearGradient(colors: [Color.white.opacity(0.05), Color.white.opacity(0.012)], startPoint: .top, endPoint: .bottom)
+                    if glass { Grain() }
+                }
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.045)], startPoint: .top, endPoint: .bottom),
+                            lineWidth: 1)
             )
-            .overlay(RoundedRectangle(cornerRadius: radius).stroke(Theme.line, lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: radius))
     }
 
-    /// List rows on the card surface.
+    /// List rows on the same glass.
     func rowSurface() -> some View {
-        self.listRowBackground(Theme.surface.opacity(0.72)).listRowSeparatorTint(Theme.line2)
+        self
+            .listRowBackground(
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Theme.surface.opacity(0.6)
+                    Grain()
+                }
+            )
+            .listRowSeparatorTint(Theme.line2)
     }
 }
 
@@ -142,7 +283,7 @@ struct Card<Content: View>: View {
             if let title = title {
                 HStack(spacing: 9) {
                     if let icon = icon {
-                        Image(systemName: icon).foregroundColor(Theme.muted).font(.system(size: 14, weight: .semibold))
+                        Image(systemName: icon).foregroundColor(Theme.accent2.opacity(0.85)).font(.system(size: 14, weight: .semibold))
                     }
                     Text(title).font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text)
                     Spacer()
@@ -205,11 +346,10 @@ struct Chip: View {
     }
 }
 
-/// The site's segmented pills: the chosen one white with dark text.
+/// Segmented pills: the chosen one lit magenta, sliding from choice to choice.
 struct SegPicker<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
-    /// the white pill is one shape that slides from choice to choice
     @Namespace private var pill
 
     var body: some View {
@@ -223,13 +363,18 @@ struct SegPicker<Value: Hashable>: View {
                 } label: {
                     Text(options[i].1)
                         .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundColor(on ? Color(hex: 0x09090B) : Theme.muted)
+                        .foregroundColor(on ? .white : Theme.muted)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
                         .background {
-                            if on { Capsule().fill(Theme.text).matchedGeometryEffect(id: "pill", in: pill) }
+                            if on {
+                                Capsule().fill(Theme.accentFill)
+                                    .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+                                    .shadow(color: Theme.accent.opacity(0.55), radius: 8, y: 3)
+                                    .matchedGeometryEffect(id: "pill", in: pill)
+                            }
                         }
                         .contentShape(Capsule())
                 }
@@ -237,7 +382,7 @@ struct SegPicker<Value: Hashable>: View {
             }
         }
         .padding(3)
-        .background(Color.white.opacity(0.04))
+        .background(Color.white.opacity(0.035))
         .overlay(Capsule().stroke(Theme.line, lineWidth: 1))
         .clipShape(Capsule())
     }
@@ -297,7 +442,7 @@ struct EmptyHint: View {
     }
 }
 
-/// The accent button with the site's glow.
+/// The accent button: lit magenta glass with a glow.
 struct AccentButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -305,10 +450,52 @@ struct AccentButtonStyle: ButtonStyle {
             .foregroundColor(.white)
             .padding(.vertical, 13)
             .frame(maxWidth: .infinity)
-            .background(Theme.accent)
+            .background(Theme.accentFill)
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.accent2.opacity(0.45), lineWidth: 1))
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .shadow(color: Theme.accent.opacity(configuration.isPressed ? 0.2 : 0.45), radius: 16, y: 6)
+            .shadow(color: Theme.accent.opacity(configuration.isPressed ? 0.25 : 0.55), radius: 16, y: 6)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(Motion.snap, value: configuration.isPressed)
+    }
+}
+
+/// Switches are check boxes, as in the script menu: the whole row is the
+/// button, the box on the right ticks with a little spring.
+struct CheckToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            Haptics.tap()
+            withAnimation(Motion.snap) { configuration.isOn.toggle() }
+        } label: {
+            HStack(spacing: 12) {
+                configuration.label
+                Spacer(minLength: 8)
+                CheckBox(on: configuration.isOn)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct CheckBox: View {
+    let on: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 7)
+                .fill(on ? AnyShapeStyle(LinearGradient(colors: [Theme.accent2, Theme.accent], startPoint: .topLeading, endPoint: .bottomTrailing))
+                         : AnyShapeStyle(Color.white.opacity(0.04)))
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(on ? Theme.accent2.opacity(0.55) : Color.white.opacity(0.22), lineWidth: 1.5)
+            Image(systemName: "checkmark")
+                .font(.system(size: 12, weight: .heavy))
+                .foregroundColor(.white)
+                .scaleEffect(on ? 1 : 0.3)
+                .opacity(on ? 1 : 0)
+        }
+        .frame(width: 24, height: 24)
+        .shadow(color: on ? Theme.accent.opacity(0.7) : .clear, radius: 8, y: 3)
+        .accessibilityHidden(true)
     }
 }
