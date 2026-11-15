@@ -136,9 +136,12 @@ final class TaubeyUITests: XCTestCase {
                     place.tap()
                     sleep(2)
                     shot("11e-charakter-stand")
+                    // the stand picker is pushed inside the sheet: back to the sheet first
+                    app.navigationBars.buttons.element(boundBy: 0).tap()
+                    sleep(1)
                 }
                 let done = app.buttons["Fertig"].firstMatch
-                if done.waitForExistence(timeout: 3) { done.tap() }
+                if done.waitForExistence(timeout: 3) { done.tap() } else { app.swipeDown() }
                 sleep(1)
             }
             let all = app.buttons["Alle"].firstMatch

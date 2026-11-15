@@ -114,7 +114,7 @@ struct Ambience: View {
                     .animation(still ? nil : .easeInOut(duration: 23).repeatForever(autoreverses: true), value: drift)
                 Tube(still: still)
                     .frame(width: w, height: h)
-                    .opacity(0.42)
+                    .opacity(0.32)
             }
             .frame(width: w, height: h)
             .clipped()
@@ -182,7 +182,7 @@ struct Tube: View {
                 stroke(-t * 0.12, t * 1.72, Color(hex: 0x8E0E84), blur: t * 0.12)
                 stroke(-t * 0.3, t * 1.2, Color(hex: 0xC824B8), blur: t * 0.22)
                 stroke(-t * 0.5, t * 0.62, Color(hex: 0xF07FE4), blur: t * 0.2)
-                stroke(-t * 0.64, t * 0.2, Color.white.opacity(0.85), blur: t * 0.08)
+                stroke(-t * 0.64, t * 0.2, Color(hex: 0xFFE0FA, opacity: 0.7), blur: t * 0.1)
             }
             .frame(width: w * 2, height: h)
             .drawingGroup()
@@ -475,6 +475,65 @@ struct CheckToggleStyle: ToggleStyle {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The fine slider of the script menu (B): a thin lit track and a small white
+/// knob with a glowing ring. Moves freely while dragging; `done` runs when the
+/// finger lets go (or after a VoiceOver step).
+struct FineSlider: View {
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    var done: () -> Void = {}
+    @State private var dragging = false
+
+    private var fraction: Double {
+        let span = range.upperBound - range.lowerBound
+        return span > 0 ? min(1, max(0, (value - range.lowerBound) / span)) : 0
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width, knob: CGFloat = 16
+            let x = knob / 2 + CGFloat(fraction) * (w - knob)
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.1)).frame(height: 3)
+                Capsule()
+                    .fill(LinearGradient(colors: [Theme.accent, Theme.accent2], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(3, x), height: 3)
+                    .shadow(color: Theme.accent.opacity(0.6), radius: 4)
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: knob, height: knob)
+                    .background(Circle().fill(Theme.accent2.opacity(0.28)).frame(width: knob + 8, height: knob + 8))
+                    .shadow(color: Theme.accent2.opacity(0.75), radius: 7)
+                    .scaleEffect(dragging ? 1.2 : 1)
+                    .animation(Motion.snap, value: dragging)
+                    .offset(x: x - knob / 2)
+            }
+            .frame(height: 28)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { g in
+                        if !dragging { dragging = true; Haptics.tap() }
+                        let f = min(1, max(0, Double((g.location.x - knob / 2) / max(1, w - knob))))
+                        value = range.lowerBound + f * (range.upperBound - range.lowerBound)
+                    }
+                    .onEnded { _ in
+                        dragging = false
+                        done()
+                    }
+            )
+        }
+        .frame(height: 28)
+        .accessibilityElement()
+        .accessibilityValue(Text(String(format: "%.0f %%", fraction * 100)))
+        .accessibilityAdjustableAction { direction in
+            let step = (range.upperBound - range.lowerBound) / 20
+            value = min(range.upperBound, max(range.lowerBound, value + (direction == .increment ? step : -step)))
+            done()
+        }
     }
 }
 

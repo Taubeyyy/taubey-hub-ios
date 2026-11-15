@@ -60,6 +60,14 @@ final class HubAPI {
         return URL(string: path, relativeTo: base)?.absoluteURL
     }
 
+    /// A potion's or case's picture, read in the game by the script
+    /// (Debug > "Item pictures to the dashboard"); public, 404 until then.
+    static func itemURL(name: String, look: String = "fish-anime") -> URL? {
+        let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/?#"))
+        guard let n = name.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
+        return URL(string: "/api/item/\(look)/\(n)", relativeTo: base)?.absoluteURL
+    }
+
     /// The picture's path, percent-encoded (URL.path would decode it again).
     static func imagePath(game: String, name: String) -> String? {
         let allowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/?#"))

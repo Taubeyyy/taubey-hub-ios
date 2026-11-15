@@ -111,13 +111,23 @@ struct SettingsEditor: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(schema.tabs, id: \.self) { name in
-                            Button { tab = name } label: {
+                            Button {
+                                Haptics.tap()
+                                withAnimation(Motion.snap) { tab = name }
+                            } label: {
                                 Text(name)
                                     .font(.system(size: 14, weight: .semibold))
                                     .padding(.horizontal, 14).padding(.vertical, 8)
-                                    .background(tab == name ? Theme.accent : Theme.surface)
+                                    .background {
+                                        if tab == name {
+                                            Capsule().fill(Theme.accentFill).shadow(color: Theme.accent.opacity(0.55), radius: 8, y: 3)
+                                        } else {
+                                            Capsule().fill(Color.white.opacity(0.05))
+                                        }
+                                    }
+                                    .overlay(Capsule().stroke(tab == name ? Theme.accent2.opacity(0.4) : Theme.line2, lineWidth: 1))
                                     .foregroundColor(tab == name ? .white : Theme.text)
-                                    .clipShape(Capsule())
+                                    .contentShape(Capsule())
                             }
                             .buttonStyle(.plain)
                         }
@@ -321,12 +331,11 @@ struct SliderControl: View {
                 Spacer()
                 Text(Format.slider(current, rounding: item.rounding) + item.suffix)
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundColor(Theme.accent)
+                    .foregroundColor(Theme.accent2)
             }
-            Slider(value: $current, in: item.min...max(item.max, item.min + 0.0001)) { editing in
-                if !editing { set(.number(Format.round(current, to: item.rounding))) }
+            FineSlider(value: $current, range: item.min...max(item.max, item.min + 0.0001)) {
+                set(.number(Format.round(current, to: item.rounding)))
             }
-            .tint(Theme.accent)
         }
     }
 }

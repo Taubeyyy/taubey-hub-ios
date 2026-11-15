@@ -327,10 +327,17 @@ struct ThingRow<Actions: View>: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(tint)
-                .frame(width: 36, height: 36)
+            // the game's own picture once the script has sent it, the icon until then
+            AsyncImage(url: HubAPI.itemURL(name: entry.name)) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFit().padding(3)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(tint)
+                }
+            }
+                .frame(width: 40, height: 40)
                 .background(tint.opacity(0.13))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 3) {
