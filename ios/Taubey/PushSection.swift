@@ -47,22 +47,49 @@ struct PushSection: View {
             }
             .rowSurface()
 
+            // the one choice for catches: Bark, the app, the dashboard and the
+            // pop-ups in the game all follow it
+            Section {
+                Menu {
+                    Picker("Fänge ab", selection: Binding(get: { settings.catches }, set: { setFloor($0) })) {
+                        Text("Aus").tag("")
+                        ForEach(ladder.reversed(), id: \.self) { tier in Text(tier).tag(tier) }
+                    }
+                } label: {
+                    HStack {
+                        Label("Fänge ab", systemImage: "sparkles").foregroundColor(Theme.text)
+                        Spacer()
+                        if settings.catches.isEmpty {
+                            Text("aus").foregroundColor(Theme.muted)
+                        } else {
+                            RarityText(name: settings.catches, size: 15)
+                        }
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold)).foregroundColor(Theme.faint)
+                    }
+                }
+                if !settings.catchNames.isEmpty {
+                    HStack(alignment: .top) {
+                        Label("Immer bei", systemImage: "star").foregroundColor(Theme.text)
+                        Spacer()
+                        Text(settings.catchNames.joined(separator: ", ")).foregroundColor(Theme.muted).multilineTextAlignment(.trailing)
+                    }
+                }
+            } header: {
+                Text("Welche Fänge gemeldet werden")
+            } footer: {
+                Text("Gilt überall: Bark, diese App, das Dashboard und die Pop-ups im Spiel. Diese Seltenheit und besser.")
+                    .foregroundColor(Theme.faint)
+            }
+            .rowSurface()
+
             if settings.appPush {
                 Section {
                     Toggle(isOn: bind(\.trouble, "trouble")) { Label("Probleme", systemImage: "exclamationmark.triangle") }
                     Toggle(isOn: bind(\.silent, "silent")) { Label("Account geht offline", systemImage: "bolt.horizontal.circle") }
                     Toggle(isOn: bind(\.back, "back")) { Label("Account ist wieder da", systemImage: "checkmark.circle") }
                     Toggle(isOn: bind(\.summary, "summary")) { Label("Tagesbericht", systemImage: "doc.text") }
-                    HStack {
-                        Label("Fänge ab", systemImage: "sparkles").foregroundColor(Theme.text)
-                        Spacer()
-                        Text(settings.catches.isEmpty ? "aus" : settings.catches).foregroundColor(Theme.muted)
-                    }
                 } header: {
                     Text("Worüber der Server pusht")
-                } footer: {
-                    Text("Ab welcher Seltenheit ein Fang zählt, stellst du im Web-Dashboard unter Alerts ein.")
-                        .foregroundColor(Theme.faint)
                 }
                 .tint(Theme.accent)
                 .rowSurface()
@@ -85,6 +112,29 @@ struct PushSection: View {
             }
         }
         .task { await load() }
+    }
+
+    /// The rarity ladder as the scripts report it, worst first.
+    private var ladder: [String] {
+        let l = store.overview?.ladder ?? []
+        return l.isEmpty ? ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical", "Cosmic", "Secret", "Rainbow", "Ascended",
+                            "Divine", "Supreme", "Celestial", "Ancient", "God", "Omniscient", "Apex", "Transcendent", "Exclusive"] : l
+    }
+
+    /// The catch floor, saved on the server at once - from there the app, Bark
+    /// and the game's pop-ups take it.
+    private func setFloor(_ tier: String) {
+        guard tier != settings.catches else { return }
+        Haptics.tap()
+        settings.catches = tier
+        Notifier.shared.rememberCatchRule(settings)
+        Task {
+            if await store.call({ try await store.api.post("/api/alerts", .object(["alerts": .object(["catches": .string(tier)])])) }) == nil {
+                await load()
+            } else {
+                store.say(tier.isEmpty ? "Fänge werden nicht mehr gemeldet" : "Fänge ab \(tier) werden gemeldet")
+            }
+        }
     }
 
     /// A switch that saves itself on the server the moment it moves.
