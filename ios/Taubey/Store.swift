@@ -163,10 +163,6 @@ final class HubStore: ObservableObject {
         }
     }
 
-    /// One of the game's own commands (move a character, level a stand, open
-    /// a box ...) to one instance, then what it came to as a toast. The script
-    /// answers on its next beat, usually within a few seconds.
-    @discardableResult
     /// Each mutation's multiplier as the game keeps it (the scripts report the
     /// table); empty until one has.
     var mutationBoosts: [String: Double] {
@@ -179,7 +175,11 @@ final class HubStore: ObservableObject {
         return [:]
     }
 
+    /// One of the game's own commands (move a character, level a stand, open
+    /// a box ...) to one instance, then what it came to as a toast. The script
+    /// answers on its next beat, usually within a few seconds.
     /// `patience`: how many two-second looks for the answer (pictures take a minute or two).
+    @discardableResult
     func run(_ cmd: String, args: [String: JSONValue], agent: String, patience: Int = 15) async -> Bool {
         guard let sent = await call({ try await api.gameCommand(cmd, args: args, agent: agent) }) else {
             Haptics.failure()
