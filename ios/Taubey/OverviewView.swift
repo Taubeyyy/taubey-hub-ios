@@ -63,7 +63,10 @@ struct OverviewView: View {
 
     private func tiles(_ o: Overview) -> some View {
         let n = Format.number
-        let held = "auf \(o.total) Instanz\(o.total == 1 ? "" : "en")"
+        // one account picked: the lines say whose it is, not "all accounts"
+        let one = store.account
+        let held = one.isEmpty ? "auf \(o.total) Instanz\(o.total == 1 ? "" : "en")" : "bei \(one)"
+        let whose = one.isEmpty ? "alle Accounts" : "bei \(one)"
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             OnlineTile(online: o.online, total: o.total)
             Tile(caption: "Cash", value: n(o.cash), icon: "banknote",
@@ -77,8 +80,8 @@ struct OverviewView: View {
             Tile(caption: "Fänge", value: n(o.catches), icon: "fish",
                  sub: "\(n(o.catchesPerMin)) pro Minute" + (o.casts > 0 ? " · \(n(o.casts)) Würfe" : ""), subTint: Theme.good)
             Tile(caption: "Rebirths", value: n(o.rebirths), icon: "arrow.triangle.2.circlepath",
-                 sub: o.nextRebirth.map { $0.short <= 0 ? "nächster: jetzt bereit" : "nächster in \(Format.duration($0.eta))" } ?? "alle Accounts")
-            Tile(caption: "Futter", value: n(o.food), icon: "leaf", sub: "alle Accounts")
+                 sub: o.nextRebirth.map { $0.short <= 0 ? "nächster: jetzt bereit" : "nächster in \(Format.duration($0.eta))" } ?? whose)
+            Tile(caption: "Futter", value: n(o.food), icon: "leaf", sub: whose)
         }
     }
 

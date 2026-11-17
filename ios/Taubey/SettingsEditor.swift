@@ -247,15 +247,29 @@ struct ControlRow: View {
     var ownLabel: String = "eigen"
     let changed: Bool
     let set: (JSONValue) -> Void
+    @State private var showTip = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             control
+            // the explanation stays one quiet line until it is asked for
             if !item.tip.isEmpty {
-                Text(item.tip).font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(3)
+                Button {
+                    withAnimation(Motion.snap) { showTip.toggle() }
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Image(systemName: showTip ? "chevron.up" : "info.circle").font(.system(size: 10.5, weight: .semibold))
+                        Text(item.tip).lineLimit(showTip ? nil : 1).multilineTextAlignment(.leading)
+                    }
+                    .font(.system(size: 12))
+                    .foregroundColor(showTip ? Theme.muted : Theme.faint)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
     }
 
     private var title: some View {

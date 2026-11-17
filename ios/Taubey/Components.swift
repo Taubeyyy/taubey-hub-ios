@@ -152,6 +152,31 @@ struct AccountChips: View {
     }
 }
 
+/// A mutation as a small lit pill, with its multiplier when the game's table
+/// is known ("Void ×5") - stronger mutations glow a little more.
+struct MutationChip: View {
+    let name: String
+    var boost: Double? = nil
+
+    private var glow: Double { min(0.55, 0.12 + log2(max(1, boost ?? 1)) * 0.1) }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "sparkle").font(.system(size: 8.5, weight: .bold)).foregroundColor(Theme.accent2)
+            Text(name).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.text)
+            if let b = boost, b > 1 {
+                Text("×" + (b == b.rounded() ? String(Int(b)) : String(format: "%.1f", b)))
+                    .font(.system(size: 11, weight: .heavy, design: .rounded)).foregroundColor(Theme.accent2)
+            }
+        }
+        .lineLimit(1)
+        .padding(.horizontal, 7).padding(.vertical, 2)
+        .background(Theme.accent.opacity(glow))
+        .overlay(Capsule().stroke(Theme.accent2.opacity(0.35), lineWidth: 0.8))
+        .clipShape(Capsule())
+    }
+}
+
 /// Small figures side by side with hairlines between - the row under a big
 /// number on the overview and on an instance.
 struct FigureRow: View {

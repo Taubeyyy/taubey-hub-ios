@@ -79,7 +79,8 @@ enum Demo {
                     "food":2550000000,"casts":8950,"cashEarned":912000000000000000000,"gemsEarned":48200000,"runtime":22320,
                     "rarities":{"Common":512,"Rare":388,"Epic":240,"Legendary":170,"Divine":31,"God":1},
                     "ladder":["Common","Uncommon","Rare","Epic","Legendary","Mythical","Cosmic","Secret","Rainbow","Ascended",
-                              "Divine","Supreme","Celestial","Ancient","God","Omniscient","Apex","Transcendent","Exclusive"]},
+                              "Divine","Supreme","Celestial","Ancient","God","Omniscient","Apex","Transcendent","Exclusive"],
+                    "mutations":{"Void":6,"Electric":3,"Blood":4,"Slime":2,"Golden":2.5}},
          "overrides":3,"pending":0,"age":4,"uptime":22320,"online":true}
         """
         let alt = """

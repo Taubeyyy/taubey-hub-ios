@@ -167,7 +167,20 @@ final class HubStore: ObservableObject {
     /// a box ...) to one instance, then what it came to as a toast. The script
     /// answers on its next beat, usually within a few seconds.
     @discardableResult
-    func run(_ cmd: String, args: [String: JSONValue], agent: String) async -> Bool {
+    /// Each mutation's multiplier as the game keeps it (the scripts report the
+    /// table); empty until one has.
+    var mutationBoosts: [String: Double] {
+        for a in overview?.agents ?? [] {
+            guard let table = a.metrics["mutations"]?.object, !table.isEmpty else { continue }
+            var out: [String: Double] = [:]
+            for (k, v) in table { if let n = v.double { out[k] = n } }
+            return out
+        }
+        return [:]
+    }
+
+    /// `patience`: how many two-second looks for the answer (pictures take a minute or two).
+    func run(_ cmd: String, args: [String: JSONValue], agent: String, patience: Int = 15) async -> Bool {
         guard let sent = await call({ try await api.gameCommand(cmd, args: args, agent: agent) }) else {
             Haptics.failure()
             return false
@@ -178,7 +191,7 @@ final class HubStore: ObservableObject {
             return false
         }
         say("Ans Script geschickt …")
-        for _ in 0..<15 {
+        for _ in 0..<patience {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             if let list = try? await api.outcomes(agent: agent), let mine = list.first(where: { $0.id == id }), mine.done {
                 say((mine.ok ? "✓ " : "✗ ") + (mine.note.isEmpty ? (mine.ok ? "Erledigt" : "Ging nicht") : mine.note))

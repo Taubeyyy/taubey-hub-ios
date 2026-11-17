@@ -5,6 +5,9 @@ struct AccountView: View {
     @EnvironmentObject var notifier: Notifier
     @State private var confirmLogout = false
 
+    /// the instance that takes the pictures: the first one online
+    private var pictureAgent: Agent? { (store.overview?.agents ?? []).first { $0.online } }
+
     private var version: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
         let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
@@ -52,6 +55,28 @@ struct AccountView: View {
                         Label("Alle neu einlesen", systemImage: "arrow.down.circle")
                     }
                     .disabled(ids.isEmpty)
+                }
+                .rowSurface()
+
+                // the game has its pictures only inside the game: one online
+                // instance reads them there and sends them to the server
+                Section {
+                    Button {
+                        guard let id = pictureAgent?.id else { return }
+                        Task { _ = await store.run("dump.pictures", args: [:], agent: id, patience: 60) }
+                    } label: { Label("Bilder der Tränke und Kisten holen", systemImage: "photo.on.rectangle") }
+                    .disabled(pictureAgent == nil)
+                    Button {
+                        guard let id = pictureAgent?.id else { return }
+                        Task { _ = await store.run("dump.portraits", args: [:], agent: id, patience: 90) }
+                    } label: { Label("Fehlende Charakterbilder holen", systemImage: "person.crop.square") }
+                    .disabled(pictureAgent == nil)
+                } header: {
+                    Text("Bilder aus dem Spiel")
+                } footer: {
+                    (Text(pictureAgent.map { "Macht \($0.account) im Spiel. " } ?? "Dafür muss eine Instanz online sein. ")
+                        + Text("Charakterbilder nur für die ohne Bild – im Spiel blinkt dabei pro Charakter kurz eine Karte auf."))
+                        .foregroundColor(Theme.faint)
                 }
                 .rowSurface()
 

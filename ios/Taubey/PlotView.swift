@@ -330,8 +330,12 @@ private struct JobSheet: View {
     let game: String
     let spare: [SpareChar]
     let send: (String, [String: JSONValue]) async -> Void
+    @EnvironmentObject var store: HubStore
     @Environment(\.dismiss) private var dismiss
     @State private var held: Bool
+
+    private var ladder: [String] { store.overview?.ladder ?? [] }
+    private var boosts: [String: Double] { store.mutationBoosts }
 
     init(job: PlotJob, game: String, spare: [SpareChar], send: @escaping (String, [String: JSONValue]) async -> Void) {
         self.job = job
@@ -356,7 +360,8 @@ private struct JobSheet: View {
 
                 Section {
                     NavigationLink {
-                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?", game: game, close: { dismiss() }) { char in
+                        SparePicker(spare: spare, title: "Wer arbeitet bei \(job.name)?", game: game, forJob: true,
+                                    ladder: ladder, boosts: boosts, close: { dismiss() }) { char in
                             Task { await send("job.set", ["job": .string(job.id), "key": .string(char.id)]) }
                             dismiss()
                         }
@@ -403,22 +408,35 @@ private struct SparePicker: View {
     let spare: [SpareChar]
     let title: String
     var game: String = ""
+    /// a job pays by rarity and mutation only, so for one the list is ranked by those
+    var forJob = false
+    var ladder: [String] = []
+    var boosts: [String: Double] = [:]
     /// closes the whole sheet, not just this list
     let close: () -> Void
     let pick: (SpareChar) -> Void
     @State private var byPotential = false
 
+    private func jobValue(_ c: SpareChar) -> Double {
+        Double(ladder.firstIndex(of: c.rarity) ?? -1) * 1000 + (boosts[c.mutation] ?? 1)
+    }
+
     private var sorted: [SpareChar] {
-        spare.sorted { byPotential ? $0.potential > $1.potential : $0.cps > $1.cps }
+        if forJob { return spare.sorted { jobValue($0) == jobValue($1) ? $0.level < $1.level : jobValue($0) > jobValue($1) } }
+        return spare.sorted { byPotential ? $0.potential > $1.potential : $0.cps > $1.cps }
     }
 
     var body: some View {
         List {
             Section {
-                SegPicker(selection: $byPotential, options: [(false, "Verdient jetzt"), (true, "Steckt am meisten drin")])
-                    .listRowBackground(Color.clear)
+                if !forJob {
+                    SegPicker(selection: $byPotential, options: [(false, "Verdient jetzt"), (true, "Steckt am meisten drin")])
+                        .listRowBackground(Color.clear)
+                }
             } footer: {
-                Text("„Steckt am meisten drin“: Einkommen pro Level – ein starker Level-1 mit guter Mutation schlägt dann einen hoch gelevelten schwachen.")
+                Text(forJob
+                     ? "Ein Job zahlt nur nach Seltenheit und Mutation – Level und Einkommen zählen dort nicht. Beste zuerst, ungelevelte vorn."
+                     : "„Steckt am meisten drin“: Einkommen pro Level – ein starker Level-1 mit guter Mutation schlägt dann einen hoch gelevelten schwachen.")
                     .foregroundColor(Theme.faint)
             }
             Section {
@@ -427,13 +445,22 @@ private struct SparePicker: View {
                     Button { pick(char) } label: {
                         HStack(spacing: 10) {
                             Portrait(name: char.name, game: game, rarity: char.rarity, size: 40, radius: 11)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(char.title).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
-                                Text("\(char.rarity) · Lv \(char.level)" + (char.count > 1 ? " · ×\(char.count)" : ""))
-                                    .font(.system(size: 12)).foregroundColor(Theme.muted)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(char.name).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
+                                HStack(spacing: 6) {
+                                    RarityText(name: char.rarity, size: 12)
+                                    if !char.mutation.isEmpty { MutationChip(name: char.mutation, boost: boosts[char.mutation]) }
+                                    Text("Lv \(char.level)" + (char.count > 1 ? " · ×\(char.count)" : ""))
+                                        .font(.system(size: 12)).foregroundColor(Theme.muted)
+                                }
                             }
                             Spacer()
-                            Text(Format.number(char.cps) + "/s").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(Theme.text)
+                            if forJob {
+                                Text("×" + Format.number(boosts[char.mutation] ?? 1))
+                                    .font(.system(size: 13, weight: .heavy, design: .rounded)).foregroundColor(Theme.accent2)
+                            } else {
+                                Text(Format.number(char.cps) + "/s").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(Theme.text)
+                            }
                         }
                     }
                 }

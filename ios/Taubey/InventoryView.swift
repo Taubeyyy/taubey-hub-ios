@@ -135,7 +135,7 @@ struct InventoryView: View {
         } else {
             Section {
                 ForEach(list) { item in
-                    Button { editing = item } label: { ItemRow(item: item, game: game, bust: pictures) }
+                    Button { editing = item } label: { ItemRow(item: item, game: game, bust: pictures, boost: store.mutationBoosts[item.mutation]) }
                         .buttonStyle(PressStyle(scale: 0.985))
                         .rowSurface()
                 }
@@ -168,7 +168,7 @@ struct InventoryView: View {
             Section {
                 ForEach(list) { entry in
                     Button { editing = entry.item } label: {
-                        ItemRow(item: entry.item, game: game, bust: pictures, note: Format.ago(entry.at))
+                        ItemRow(item: entry.item, game: game, bust: pictures, note: Format.ago(entry.at), boost: store.mutationBoosts[entry.item.mutation])
                     }
                     .buttonStyle(PressStyle(scale: 0.985))
                     .rowSurface()
@@ -270,6 +270,8 @@ struct ItemRow: View {
     let game: String
     var bust: Int = 0
     var note: String? = nil
+    /// the mutation's multiplier, when the game's table is known
+    var boost: Double? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -292,14 +294,7 @@ struct ItemRow: View {
                 }
                 HStack(spacing: 6) {
                     RarityText(name: item.rarity, size: 12)
-                    if !item.mutation.isEmpty {
-                        Text(item.mutation)
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Theme.text)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Theme.accentSoft)
-                            .clipShape(Capsule())
-                    }
+                    if !item.mutation.isEmpty { MutationChip(name: item.mutation, boost: boost) }
                 }
             }
             Spacer(minLength: 8)

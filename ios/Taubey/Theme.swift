@@ -224,7 +224,7 @@ struct Grain: View {
     var body: some View {
         Image(uiImage: GrainTile.image)
             .resizable(resizingMode: .tile)
-            .opacity(0.55)
+            .opacity(0.28)
             .allowsHitTesting(false)
     }
 }
