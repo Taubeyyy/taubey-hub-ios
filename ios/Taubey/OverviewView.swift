@@ -26,6 +26,7 @@ struct OverviewView: View {
                     if let o = store.shown {
                         tiles(o).appear(0)
                         if let next = o.nextRebirth { rebirth(next).appear(1) }
+                        chancesCard(o).appear(1)
                         chart.appear(2)
                         rarities(o).appear(3)
                         events(o).appear(4)
@@ -78,7 +79,13 @@ struct OverviewView: View {
             Tile(caption: "Gems / Min", value: n(o.gemsPerMin), icon: "diamond.fill",
                  sub: "\(n(o.gemsPerMin * 60)) pro Stunde", subTint: Theme.good)
             Tile(caption: "Fänge", value: n(o.catches), icon: "fish",
-                 sub: "\(n(o.catchesPerMin)) pro Minute" + (o.casts > 0 ? " · \(n(o.casts)) Würfe" : ""), subTint: Theme.good)
+                 sub: "\(n(o.catchesPerMin * 60)) pro Stunde", subTint: Theme.good)
+            // the catch rate: catches a minute, and how many casts land one
+            Tile(caption: "Fang-Rate", value: n(o.catchesPerMin) + "/min", icon: "speedometer",
+                 sub: o.castsPerMin > 0 ? "\(Int(min(100, (o.catchesPerMin / o.castsPerMin * 100).rounded())))% der Würfe" : "pro Minute",
+                 subTint: Theme.good)
+            Tile(caption: "Würfe", value: n(o.casts), icon: "scope",
+                 sub: "\(n(o.castsPerMin)) pro Minute", subTint: Theme.good)
             Tile(caption: "Rebirths", value: n(o.rebirths), icon: "arrow.triangle.2.circlepath",
                  sub: o.nextRebirth.map { $0.short <= 0 ? "nächster: jetzt bereit" : "nächster in \(Format.duration($0.eta))" } ?? whose)
             Tile(caption: "Futter", value: n(o.food), icon: "leaf", sub: whose)
@@ -86,6 +93,47 @@ struct OverviewView: View {
     }
 
     // MARK: sections
+
+    /// The live odds per rarity and how long each takes on average.
+    private func chancesCard(_ o: Overview) -> some View {
+        Card(title: "Fang-Chancen", icon: "dice", trailing: o.chances.map { $0.account }) {
+            if let c = o.chances {
+                let rows = c.ordered(ladder: o.ladder)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    ForEach(rows, id: \.name) { row in
+                        VStack(alignment: .leading, spacing: 3) {
+                            RarityText(name: row.name, size: 13)
+                            Text("1 zu " + Format.number(row.odds))
+                                .font(.system(size: 16, weight: .heavy, design: .rounded)).foregroundColor(Theme.text)
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                            Text(c.minutes(row.odds).map(Self.eta) ?? "–")
+                                .font(.system(size: 11.5)).foregroundColor(Theme.faint).lineLimit(1)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.white.opacity(0.03))
+                        .overlay(RoundedRectangle(cornerRadius: 11).stroke(Theme.line, lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 11))
+                    }
+                }
+                if let total = c.mutationTotal {
+                    Text("Mutation bei \(Format.number(total)) % der Fänge · mit Glück, Rute und Tränken")
+                        .font(.system(size: 12)).foregroundColor(Theme.faint)
+                }
+            } else {
+                Text("Noch keine Chancen – das Script liest sie aus dem „Current Chances“-Fenster des Spiels, sobald es einmal offen war.")
+                    .font(.system(size: 13.5)).foregroundColor(Theme.muted)
+            }
+        }
+    }
+
+    /// "≈ 18 h bei diesem Tempo"
+    private static func eta(_ minutes: Double) -> String {
+        if minutes < 1 { return "fast jeder Fang" }
+        if minutes < 60 { return "≈ \(Int(minutes.rounded())) min" }
+        if minutes < 48 * 60 { return "≈ " + String(format: "%.1f", minutes / 60) + " h" }
+        return "≈ \(Int((minutes / 1440).rounded())) Tage"
+    }
 
     private func rebirth(_ next: NextRebirth) -> some View {
         Card(title: "Nächster Rebirth", icon: "arrow.triangle.2.circlepath", trailing: store.account.isEmpty ? next.account : nil) {

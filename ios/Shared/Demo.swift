@@ -107,6 +107,8 @@ enum Demo {
          "rarities":{"Common":812,"Rare":640,"Epic":402,"Legendary":288,"Cosmic":154,"Secret":155,"Rainbow":168,"Ascended":47,
                      "Divine":46,"Supreme":9,"Celestial":3,"God":1},
          "rarityRange":"session",
+         "chances":{"account":"Taubeyyyy","catchesPerMin":277.2,"total":10.2,
+                    "rarity":{"Divine":1900,"Supreme":9400,"Celestial":31000,"Ancient":88000,"God":225000,"Omniscient":1400000,"Apex":5600000}},
          "ladder":["Common","Uncommon","Rare","Epic","Legendary","Mythical","Cosmic","Secret","Rainbow","Ascended","Divine",
                    "Supreme","Celestial","Ancient","God","Omniscient","Apex","Transcendent","Exclusive"],
          "groups":[{"name":"","online":2,"total":2}],

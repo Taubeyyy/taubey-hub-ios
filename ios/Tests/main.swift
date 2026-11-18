@@ -133,6 +133,12 @@ check(Overview(Demo.answer("/api/overview?range=session&account=Alt")).agents.co
 // nothing the script reports is dropped: gems and food in the totals, every
 // metric either in the script's own lines or in the extra ones, never twice
 check(demoOverview.food > 0 && demoOverview.gemsEarned > 0, "totals carry food and earned gems")
+if let c = demoOverview.chances {
+    check(c.ordered(ladder: demoOverview.ladder).first?.name == "Apex", "chances best first")
+    check(abs((c.minutes(225000) ?? 0) - 225000 / 277.2) < 0.01, "minutes at the pace")
+} else {
+    check(false, "demo chances read")
+}
 if let main = demoOverview.agents.first(where: { $0.account == "Taubeyyyy" }) {
     let extra = main.extraLines.map { $0.0 }
     check(main.statLines.contains { $0.0 == "Gems" }, "gems line")

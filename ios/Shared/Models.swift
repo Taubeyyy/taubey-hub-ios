@@ -160,6 +160,9 @@ struct Overview {
     let catches: Double
     let catchesPerMin: Double
     let casts: Double
+    let castsPerMin: Double
+    /// the live odds of one account's Current Chances panel
+    let chances: Chances?
     let food: Double
     let cashEarned: Double
     let gemsEarned: Double
@@ -183,6 +186,8 @@ struct Overview {
         catches = t["catches"].double ?? 0
         catchesPerMin = t["catchesPerMin"].double ?? 0
         casts = t["casts"].double ?? 0
+        castsPerMin = t["castsPerMin"].double ?? 0
+        chances = Chances(j["chances"])
         food = t["food"].double ?? 0
         cashEarned = t["cashEarned"].double ?? 0
         gemsEarned = t["gemsEarned"].double ?? 0
@@ -208,6 +213,37 @@ struct Overview {
         }
         return out
     }
+}
+
+/// One account's live catch odds, read by its script off the game's Current
+/// Chances panel: per rarity "1 in N" with luck, rod and potions already in.
+struct Chances {
+    let account: String
+    let catchesPerMin: Double
+    let rarity: [String: Double]
+    let mutationTotal: Double?
+
+    init?(_ j: JSONValue) {
+        guard let table = j["rarity"].object, !table.isEmpty else { return nil }
+        var r: [String: Double] = [:]
+        for (k, v) in table { if let n = v.double, n > 0 { r[k] = n } }
+        guard !r.isEmpty else { return nil }
+        rarity = r
+        account = j["account"].string ?? ""
+        catchesPerMin = j["catchesPerMin"].double ?? 0
+        mutationTotal = j["total"].double
+    }
+
+    /// Rarities best first (the ladder reversed), then any it does not know.
+    func ordered(ladder: [String]) -> [(name: String, odds: Double)] {
+        var out: [(String, Double)] = []
+        for name in ladder.reversed() { if let n = rarity[name] { out.append((name, n)) } }
+        for (name, n) in rarity.sorted(by: { $0.value > $1.value }) where !ladder.contains(name) { out.append((name, n)) }
+        return out.map { (name: $0.0, odds: $0.1) }
+    }
+
+    /// Minutes on average until one, at this account's pace; nil without a pace.
+    func minutes(_ odds: Double) -> Double? { catchesPerMin > 0 ? odds / catchesPerMin : nil }
 }
 
 struct RarityCount: Identifiable, Hashable {
