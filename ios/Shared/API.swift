@@ -225,6 +225,16 @@ final class HubAPI {
         return answer["ids"][0].int
     }
 
+    /// One command's step on its way: queued, delivered, running, done or
+    /// failed. With `after` the server answers once it has moved past that
+    /// step, or after `wait` seconds with the step unchanged.
+    func commandState(_ id: Int, after: String = "", wait: Int = 15) async throws -> (state: String, note: String) {
+        if demo { return ("done", "Erledigt") }
+        let query = after.isEmpty ? "" : "?after=\(after)&wait=\(wait)"
+        let j = try await get("/api/command/\(id)" + query)
+        return (j["state"].string ?? "", j["note"].string ?? "")
+    }
+
     func outcomes(agent: String) async throws -> [CommandOutcome] {
         (try await get("/api/agent/\(HubAPI.agentPath(agent))/commands")["rows"].array ?? []).compactMap(CommandOutcome.init)
     }

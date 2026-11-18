@@ -42,12 +42,16 @@ struct PlotView: View {
         .navigationTitle("Stände & Jobs")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await reload() }
+        // while this is open the script reports its plot every few seconds
+        // (the server tells it someone is looking), so a short look here
         .task {
             while !Task.isCancelled {
                 await reload()
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
             }
         }
+        // a command finished: its effect is already on the server
+        .onChange(of: store.lastCommandAt) { _ in Task { await reload() } }
         .sheet(item: $standSheet) { stand in
             StandSheet(stand: stand, game: agent.game, spare: report?.spare ?? [], food: report?.food ?? 0, smart: report?.smart ?? true) { cmd, args in
                 await send(cmd, args)

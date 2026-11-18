@@ -194,8 +194,11 @@ final class TaubeyUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
-        if let dir = ProcessInfo.processInfo.environment["SHOT_DIR"] {
-            try? image.pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name + ".png"))
+        // a JPEG at 80%: a tenth of the PNG, and the artifact stays well under
+        // GitHub's download allowance
+        if let dir = ProcessInfo.processInfo.environment["SHOT_DIR"],
+           let jpeg = image.image.jpegData(compressionQuality: 0.8) {
+            try? jpeg.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name + ".jpg"))
         }
     }
 }

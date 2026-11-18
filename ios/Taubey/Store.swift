@@ -176,9 +176,10 @@ final class HubStore: ObservableObject {
     }
 
     /// One of the game's own commands (move a character, level a stand, open
-    /// a box ...) to one instance, then what it came to as a toast. The script
-    /// answers on its next beat, usually within a few seconds.
-    /// `patience`: how many two-second looks for the answer (pictures take a minute or two).
+    /// a box ...) to one instance, followed step by step: the server says the
+    /// moment the script took it, started it and finished it, and the toast
+    /// says so too. `patience`: roughly how many seconds/2 it may take to
+    /// finish (pictures take a minute or two).
     @discardableResult
     func run(_ cmd: String, args: [String: JSONValue], agent: String, patience: Int = 15) async -> Bool {
         guard let sent = await call({ try await api.gameCommand(cmd, args: args, agent: agent) }) else {
@@ -190,18 +191,46 @@ final class HubStore: ObservableObject {
             Haptics.failure()
             return false
         }
-        say("Ans Script geschickt …")
-        for _ in 0..<patience {
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            if let list = try? await api.outcomes(agent: agent), let mine = list.first(where: { $0.id == id }), mine.done {
-                say((mine.ok ? "✓ " : "✗ ") + (mine.note.isEmpty ? (mine.ok ? "Erledigt" : "Ging nicht") : mine.note))
-                if mine.ok { Haptics.success() } else { Haptics.failure() }
-                return mine.ok
+        say("Gesendet …")
+        let start = Date()
+        let deadline = start.addingTimeInterval(Double(patience) * 2 + 15)
+        var step = "queued"
+        while Date() < deadline {
+            guard let now = try? await api.commandState(id, after: step, wait: 12) else {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                continue
+            }
+            if now.state == step {
+                // nothing moved: a script that has not even taken it is not there
+                if step == "queued" && Date().timeIntervalSince(start) > 12 {
+                    say("Das Script nimmt nichts an – ist die Instanz online?")
+                    Haptics.failure()
+                    return false
+                }
+                continue
+            }
+            step = now.state
+            switch step {
+            case "delivered":
+                say("Angekommen …")
+            case "running":
+                say("Läuft …")
+            case "done", "failed":
+                let ok = step == "done"
+                say((ok ? "✓ " : "✗ ") + (now.note.isEmpty ? (ok ? "Erledigt" : "Ging nicht") : Lingo.value(now.note)))
+                if ok { Haptics.success() } else { Haptics.failure() }
+                lastCommandAt = Date()
+                return ok
+            default:
+                break
             }
         }
-        say("Noch keine Antwort – das Script ist gerade beschäftigt.")
+        say(step == "running" ? "Läuft noch – das Ergebnis kommt in der Liste an." : "Keine Antwort vom Script.")
         return false
     }
+
+    /// When a command last finished - views that show its effect reload then.
+    @Published var lastCommandAt: Date?
 
     func setPaused(_ paused: Bool, agent: Agent) async {
         if await call({
