@@ -128,77 +128,6 @@ struct PlotView: View {
     }
 }
 
-// MARK: rows
-
-private struct StandRow: View {
-    let stand: PlotStand
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(stand.has ? Theme.color(rarity: stand.rarity) : Theme.line2)
-                .frame(width: 4, height: 34)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(stand.has ? stand.name : (stand.locked ? "gesperrt" : "leer"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(stand.has ? Theme.text : Theme.faint)
-                    .lineLimit(1)
-                Text(stand.label + (stand.has ? " · \(stand.rarity) · Lv \(stand.level)" : ""))
-                    .font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            if stand.held { Image(systemName: "hand.raised.fill").foregroundColor(Theme.warn).font(.system(size: 13)) }
-            else if stand.pinned { Image(systemName: "pin.fill").foregroundColor(Theme.accent).font(.system(size: 12)) }
-            if stand.has {
-                Text(Format.number(stand.cps) + "/s")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(Theme.text)
-                    .contentTransition(.numericText())
-                    .animation(.easeOut(duration: 0.4), value: stand.cps)
-            }
-        }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
-    }
-}
-
-private struct JobRow: View {
-    let job: PlotJob
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Theme.accent)
-                .frame(width: 30, height: 30)
-                .background(Theme.accentSoft)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(job.name).font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
-                Text(job.busy ? (job.whoName.isEmpty ? "besetzt" : "\(job.whoName) · \(job.whoRarity)") : "frei")
-                    .font(.system(size: 12)).foregroundColor(job.busy ? Theme.muted : Theme.warn)
-            }
-            Spacer()
-            if job.held { Image(systemName: "hand.raised.fill").foregroundColor(Theme.warn).font(.system(size: 13)) }
-            else if job.pinned { Image(systemName: "pin.fill").foregroundColor(Theme.accent).font(.system(size: 12)) }
-            if job.busy && job.whoCps > 0 {
-                Text(Format.number(job.whoCps) + "/s").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(Theme.text)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-
-    private var icon: String {
-        switch job.kind {
-        case "Gardens": return "leaf.fill"
-        case "Lemon stand": return "cup.and.saucer.fill"
-        case "Fishing dock": return "ferry.fill"
-        default: return "briefcase.fill"
-        }
-    }
-}
-
-
 // MARK: sheets
 
 /// One stand: level it, swap who stands there, take them off, leave it alone.
@@ -353,11 +282,23 @@ private struct JobSheet: View {
         NavigationStack {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Job · " + PlotJob.kindName(job.kind)).font(.system(size: 13)).foregroundColor(Theme.muted)
-                        Text(job.name).font(.system(size: 20, weight: .bold)).foregroundColor(Theme.text)
-                        Text(job.busy ? (job.whoName.isEmpty ? "besetzt" : "\(job.whoName) · \(job.whoRarity) · Lv \(job.whoLevel)") : "frei")
-                            .font(.system(size: 13)).foregroundColor(Theme.muted)
+                    HStack(spacing: 14) {
+                        if job.busy && !job.whoName.isEmpty {
+                            Portrait(name: job.whoName, game: game, rarity: job.whoRarity, size: 64, radius: 16)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Job · " + PlotJob.kindName(job.kind)).font(.system(size: 13)).foregroundColor(Theme.muted)
+                            Text(job.name).font(.system(size: 20, weight: .bold)).foregroundColor(Theme.text)
+                            if job.busy && !job.whoName.isEmpty {
+                                HStack(spacing: 6) {
+                                    Text(job.whoName).font(.system(size: 13, weight: .semibold)).foregroundColor(Theme.text)
+                                    RarityText(name: job.whoRarity, size: 12)
+                                }
+                            } else {
+                                Text(job.busy ? "besetzt" : "frei").font(.system(size: 13)).foregroundColor(job.busy ? Theme.muted : Theme.warn)
+                            }
+                        }
+                        Spacer(minLength: 0)
                     }
                 }
                 .rowSurface()

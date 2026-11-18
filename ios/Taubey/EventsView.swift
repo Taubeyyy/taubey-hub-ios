@@ -54,6 +54,7 @@ struct EventsView: View {
 
 struct EventRow: View {
     let event: HubEvent
+    @EnvironmentObject var store: HubStore
 
     private var icon: (String, Color) {
         switch event.kind {
@@ -66,17 +67,25 @@ struct EventRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon.0)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(icon.1)
-                .frame(width: 30, height: 30)
-                .background(icon.1.opacity(0.14))
-                .clipShape(Circle())
+            if event.kind == "catch" {
+                // the character that was caught, framed in its rarity
+                Portrait(name: event.character, game: event.game, rarity: event.detail, size: 38, radius: 11)
+            } else {
+                Image(systemName: icon.0)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(icon.1)
+                    .frame(width: 30, height: 30)
+                    .background(icon.1.opacity(0.14))
+                    .clipShape(Circle())
+            }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(event.kind == "catch" ? event.title : Lingo.event(event.title))
+                    Text(event.kind == "catch" ? event.character : Lingo.event(event.title))
                         .font(.system(size: 14, weight: .semibold)).foregroundColor(Theme.text).lineLimit(2)
                     if event.kind == "catch" && !event.detail.isEmpty { RarityText(name: event.detail, size: 12) }
+                    if event.kind == "catch" && !event.mutation.isEmpty {
+                        MutationChip(name: event.mutation, boost: store.mutationBoosts[event.mutation])
+                    }
                 }
                 if event.kind != "catch" && !event.detail.isEmpty {
                     Text(Lingo.detail(event.detail)).font(.system(size: 12)).foregroundColor(Theme.muted).lineLimit(2)

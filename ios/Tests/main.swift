@@ -185,6 +185,10 @@ check(AlertLogic.wanted(catchEvent("Kaito", "Apex"), floor: "God", names: [], la
 check(AlertLogic.wanted(catchEvent("Aquella [Slime]", "Rare"), floor: "God", names: ["aquella"], ladder: tiers), "watched name, any mutation")
 check(!AlertLogic.wanted(catchEvent("AI Hoshi", "God"), floor: "", names: [], ladder: tiers), "nothing set, nothing said")
 check(AlertLogic.wanted(HubEvent(json("{\"at\":1763200000,\"kind\":\"trouble\",\"title\":\"x\"}"))!, floor: "", names: [], ladder: tiers), "trouble always")
+// the picture of a catch is the character's, without the mutation
+check(catchEvent("Rubie Hoshi [Electric]", "Divine").character == "Rubie Hoshi", "catch: character without the mutation")
+check(catchEvent("Rubie Hoshi [Electric]", "Divine").mutation == "Electric", "catch: its mutation")
+check(catchEvent("Mari Kita II", "God").character == "Mari Kita II" && catchEvent("Mari Kita II", "God").mutation.isEmpty, "catch: no mutation")
 
 // MARK: German for what the script says
 check(Lingo.label("Next rebirth") == "Nächster Rebirth" && Lingo.label("Whatever") == "Whatever", "labels")

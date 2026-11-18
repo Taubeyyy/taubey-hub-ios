@@ -141,6 +141,18 @@ struct HubEvent: Identifiable, Hashable {
         game = j["game"].string ?? ""
         id = j["id"].string ?? "\(seconds)-\(kind)-\(title)"
     }
+
+    /// A catch's title is "Aquella" or "Aquella [Slime]": the character ...
+    var character: String {
+        guard let open = title.range(of: " [", options: .backwards), title.hasSuffix("]") else { return title }
+        return String(title[..<open.lowerBound]).trimmingCharacters(in: .whitespaces)
+    }
+
+    /// ... and its mutation, when it has one.
+    var mutation: String {
+        guard let open = title.range(of: " [", options: .backwards), title.hasSuffix("]") else { return "" }
+        return String(title[open.upperBound..<title.index(before: title.endIndex)])
+    }
 }
 
 struct AgentGroup: Hashable {
