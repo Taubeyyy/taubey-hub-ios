@@ -29,6 +29,8 @@ struct MissingPicturesView: View {
                             Spacer()
                             Image(systemName: "camera.viewfinder").foregroundColor(Theme.accent2)
                         }
+                        // the whole row, not just the text and the picture
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
