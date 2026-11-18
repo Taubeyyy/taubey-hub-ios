@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 // Logic tests, run on the CI runner with plain swiftc before the Xcode build:
 //   swiftc Shared/*.swift Tests/*.swift -o /tmp/logic && /tmp/logic
@@ -185,6 +186,46 @@ check(AlertLogic.wanted(catchEvent("Kaito", "Apex"), floor: "God", names: [], la
 check(AlertLogic.wanted(catchEvent("Aquella [Slime]", "Rare"), floor: "God", names: ["aquella"], ladder: tiers), "watched name, any mutation")
 check(!AlertLogic.wanted(catchEvent("AI Hoshi", "God"), floor: "", names: [], ladder: tiers), "nothing set, nothing said")
 check(AlertLogic.wanted(HubEvent(json("{\"at\":1763200000,\"kind\":\"trouble\",\"title\":\"x\"}"))!, floor: "", names: [], ladder: tiers), "trouble always")
+// a screenshot of the photo stage: the card is found in the green screen
+func stageShot(width: Int, height: Int, greenCharacter: Bool) -> CGImage {
+    let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    // the viewer's bars above and below, the game's green screen between (drawn in
+    // CG's bottom-up space: y here counts from the bottom)
+    ctx.setFillColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1)
+    ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    let game = CGRect(x: 0, y: 200, width: width, height: height - 500)
+    ctx.setFillColor(red: 0, green: 1, blue: 0, alpha: 1)
+    ctx.fill(game)
+    let side = min(game.width, game.height) * 0.7
+    let card = CGRect(x: game.midX - side / 2, y: game.midY - side / 2, width: side, height: side)
+    ctx.setFillColor(red: 26 / 255, green: 22 / 255, blue: 32 / 255, alpha: 1)
+    ctx.fill(card)
+    // the character, a pale figure in the card - green clothes in the second case
+    ctx.setFillColor(red: greenCharacter ? 0.1 : 0.95, green: greenCharacter ? 0.9 : 0.8, blue: greenCharacter ? 0.1 : 0.7, alpha: 1)
+    ctx.fill(CGRect(x: card.midX - 40, y: card.minY, width: 80, height: side * 0.8))
+    return ctx.makeImage()!
+}
+do {
+    let shot = stageShot(width: 600, height: 1300, greenCharacter: false)
+    // in the picture's pixels (top-down): the game spans y 300...1100, the card is 420 wide, centred
+    let found = StageFinder.card(in: shot)
+    check(found != nil, "stage: card found")
+    if let r = found {
+        check(abs(r.width - 420) < 20 && abs(r.height - r.width) < 1, "stage: card size \(r.width)")
+        check(abs(r.midX - 300) < 6 && abs(r.midY - 700) < 6, "stage: card in the middle \(r.midX),\(r.midY)")
+    }
+    let green = StageFinder.card(in: stageShot(width: 600, height: 1300, greenCharacter: true))
+    check(green.map { abs($0.width - 420) < 20 && abs($0.midY - 700) < 6 } == true, "stage: green clothes do not cut the card")
+    let ctx = CGContext(data: nil, width: 300, height: 300, bitsPerComponent: 8, bytesPerRow: 1200,
+                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    ctx.setFillColor(red: 0.3, green: 0.2, blue: 0.5, alpha: 1)
+    ctx.fill(CGRect(x: 0, y: 0, width: 300, height: 300))
+    check(StageFinder.card(in: ctx.makeImage()!) == nil, "stage: no green screen, no card")
+}
+check(MissingPicture(json("{\"game\":\"Fish an Anime RNG\",\"name\":\"CeCe\",\"rarity\":\"God\"}"))?.id == "Fish an Anime RNG|CeCe", "missing picture parsed")
+check(MissingPicture(json("{\"game\":\"x\"}")) == nil, "missing picture without a name")
+
 // the picture of a catch is the character's, without the mutation
 check(catchEvent("Rubie Hoshi [Electric]", "Divine").character == "Rubie Hoshi", "catch: character without the mutation")
 check(catchEvent("Rubie Hoshi [Electric]", "Divine").mutation == "Electric", "catch: its mutation")

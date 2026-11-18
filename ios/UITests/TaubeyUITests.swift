@@ -173,6 +173,19 @@ final class TaubeyUITests: XCTestCase {
         app.swipeUp()
         sleep(1)
         shot("14-konto-unten")
+        // pictures by hand: the list, and one character's sheet
+        let missing = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Fehlende Charakterbilder'")).firstMatch
+        if missing.waitForExistence(timeout: 3) {
+            missing.tap()
+            sleep(2)
+            shot("15-fehlende-bilder")
+            let cece = app.buttons.matching(NSPredicate(format: "label CONTAINS 'CeCe'")).firstMatch
+            if cece.waitForExistence(timeout: 3) {
+                cece.tap()
+                sleep(2)
+                shot("16-bild-aufnehmen")
+            }
+        }
     }
 
     func testSignIn() {

@@ -66,16 +66,14 @@ struct AccountView: View {
                         Task { _ = await store.run("dump.pictures", args: [:], agent: id, patience: 60) }
                     } label: { Label("Bilder der Tränke und Kisten holen", systemImage: "photo.on.rectangle") }
                     .disabled(pictureAgent == nil)
-                    Button {
-                        guard let id = pictureAgent?.id else { return }
-                        Task { _ = await store.run("dump.portraits", args: [:], agent: id, patience: 90) }
-                    } label: { Label("Fehlende Charakterbilder holen", systemImage: "person.crop.square") }
-                    .disabled(pictureAgent == nil)
+                    NavigationLink {
+                        MissingPicturesView()
+                    } label: { Label("Fehlende Charakterbilder", systemImage: "camera.viewfinder") }
                 } header: {
                     Text("Bilder aus dem Spiel")
                 } footer: {
-                    (Text(pictureAgent.map { "Macht \($0.account) im Spiel. " } ?? "Dafür muss eine Instanz online sein. ")
-                        + Text("Charakterbilder nur für die ohne Bild – im Spiel blinkt dabei pro Charakter kurz eine Karte auf."))
+                    (Text(pictureAgent.map { "Tränke und Kisten liest \($0.account) im Spiel aus. " } ?? "Für Tränke und Kisten muss eine Instanz online sein. ")
+                        + Text("Charakterbilder machst du selbst per Screenshot – das Script stellt die Figur dafür groß ins Bild."))
                         .foregroundColor(Theme.faint)
                 }
                 .rowSurface()

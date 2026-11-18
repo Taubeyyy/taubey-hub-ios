@@ -155,6 +155,21 @@ struct HubEvent: Identifiable, Hashable {
     }
 }
 
+/// A character the owner has that no picture exists of yet.
+struct MissingPicture: Identifiable, Hashable {
+    let game: String
+    let name: String
+    let rarity: String
+    var id: String { game + "|" + name }
+
+    init?(_ j: JSONValue) {
+        guard let name = j["name"].string, !name.isEmpty else { return nil }
+        self.name = name
+        game = j["game"].string ?? ""
+        rarity = j["rarity"].string ?? ""
+    }
+}
+
 struct AgentGroup: Hashable {
     let name: String
     let online: Int

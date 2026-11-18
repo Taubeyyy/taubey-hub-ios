@@ -151,6 +151,11 @@ final class HubAPI {
 
     // MARK: - calls the app makes
 
+    /// The characters of this owner that no picture answers for yet.
+    func missingPictures() async throws -> [MissingPicture] {
+        (try await get("/api/pictures/missing")["rows"].array ?? []).compactMap(MissingPicture.init)
+    }
+
     /// `account` narrows everything to one Roblox account; empty = all.
     func overview(range: String, account: String = "") async throws -> Overview {
         Overview(try await get("/api/overview?range=\(range)" + HubAPI.accountQuery(account)))

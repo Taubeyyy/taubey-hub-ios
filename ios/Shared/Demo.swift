@@ -20,6 +20,11 @@ enum Demo {
         }
         if p.hasPrefix("/api/agent/") { return json(agentConfig) }
         if p.hasPrefix("/api/auth/me") { return json("{\"ok\":true,\"name\":\"Taubey\"}") }
+        if p.hasPrefix("/api/pictures/missing") {
+            return json("{\"ok\":true,\"rows\":[{\"game\":\"Fish an Anime RNG\",\"name\":\"CeCe\",\"rarity\":\"God\"},"
+                + "{\"game\":\"Fish an Anime RNG\",\"name\":\"Ronavia\",\"rarity\":\"Omniscient\"},"
+                + "{\"game\":\"Fish an Anime RNG\",\"name\":\"Kafka\",\"rarity\":\"Ancient\"}]}")
+        }
         if p.hasPrefix("/api/command") { return json("{\"ok\":true,\"sent\":1,\"ids\":[7]}") }
         if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"apns\":1,\"apnsErrors\":[]}") }
         if p.hasPrefix("/api/alerts") {
