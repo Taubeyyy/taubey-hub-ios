@@ -82,10 +82,10 @@ struct OverviewView: View {
                  sub: "\(n(o.catchesPerMin * 60)) pro Stunde", subTint: Theme.good)
             // the catch rate: catches a minute, and how many casts land one
             Tile(caption: "Fang-Rate", value: n(o.catchesPerMin) + "/min", icon: "speedometer",
-                 sub: o.castsPerMin > 0 ? "\(Int(min(100, (o.catchesPerMin / o.castsPerMin * 100).rounded())))% der Würfe" : "pro Minute",
-                 subTint: Theme.good)
+                 sub: o.castsPerMin > 0 ? "\(Int(min(100, (o.catchesPerMin / o.castsPerMin * 100).rounded())))% der Würfe" : "Fänge pro Minute",
+                 subTint: o.castsPerMin > 0 ? Theme.good : nil)
             Tile(caption: "Würfe", value: n(o.casts), icon: "scope",
-                 sub: "\(n(o.castsPerMin)) pro Minute", subTint: Theme.good)
+                 sub: o.castsPerMin > 0 ? "\(n(o.castsPerMin)) pro Minute" : "seit dem Start", subTint: o.castsPerMin > 0 ? Theme.good : nil)
             Tile(caption: "Rebirths", value: n(o.rebirths), icon: "arrow.triangle.2.circlepath",
                  sub: o.nextRebirth.map { $0.short <= 0 ? "nächster: jetzt bereit" : "nächster in \(Format.duration($0.eta))" } ?? whose)
             Tile(caption: "Futter", value: n(o.food), icon: "leaf", sub: whose)

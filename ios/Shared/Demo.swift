@@ -99,6 +99,7 @@ enum Demo {
             : """
               {"online":2,"total":2,"cash":206123101412664670000,"gems":3535498,
                "cashPerSec":114370867251891070,"gemsPerMin":9885.8,"catches":49235,"catchesPerMin":481.7,"rebirths":281,"food":2646000000,"casts":53050,
+               "castsPerMin":521.3,
                "cashEarned":912000000000000000000,"gemsEarned":48200000,
                "nextRebirth":{"account":"Taubeyyyy","cost":286791049603165450000,"short":80667948190500780000,"eta":713}}
               """
