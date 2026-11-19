@@ -100,20 +100,55 @@ final class HubStore: ObservableObject {
         overview = nil
     }
 
-    /// Runs one call; a lost session sends you back to the sign-in, anything
-    /// else lands in the banner.
+    /// Calls in a row that failed on the way (no network, server busy). One
+    /// slip is no news - a cloud phone, a train, a tunnel - so the banner only
+    /// comes on the second, and the data from before stays on screen.
+    private var failStreak = 0
+
+    /// Runs one call; a lost session sends you back to the sign-in, a
+    /// connection that is briefly gone waits for the next try, anything else
+    /// lands in the banner.
     func call<T>(_ work: () async throws -> T) async -> T? {
         do {
             let value = try await work()
             error = nil
+            failStreak = 0
             return value
         } catch APIError.notSignedIn {
             signOut()
+            return nil
+        } catch let e as APIError {
+            if HubStore.passing(e) {
+                failStreak += 1
+                if failStreak >= 2 {
+                    error = "Keine Verbindung zum Server – ich versuche es weiter"
+                        + (lastUpdate.map { " · letzter Stand " + Format.ago($0) } ?? "")
+                }
+            } else {
+                error = e.localizedDescription
+            }
             return nil
         } catch {
             self.error = error.localizedDescription
             return nil
         }
+    }
+
+    /// Errors that are about the way there, not about what was asked.
+    static func passing(_ e: APIError) -> Bool {
+        switch e {
+        case .offline: return true
+        case .http(let code): return code == 0 || code == 408 || code == 429 || code >= 500
+        default: return false
+        }
+    }
+
+    /// The newest restart by the phone's watchdog for an account, from the
+    /// events the overview carries.
+    func lastWatchdog(_ account: String) -> HubEvent? {
+        (overview?.events ?? [])
+            .filter { $0.account == account && $0.title.hasPrefix("Watchdog") }
+            .max { $0.at < $1.at }
     }
 
     func refresh() async {
@@ -183,6 +218,7 @@ final class HubStore: ObservableObject {
     @discardableResult
     func run(_ cmd: String, args: [String: JSONValue], agent: String, patience: Int = 15) async -> Bool {
         guard let sent = await call({ try await api.gameCommand(cmd, args: args, agent: agent) }) else {
+            say("Nicht gesendet – keine Verbindung zum Server")
             Haptics.failure()
             return false
         }
@@ -191,18 +227,26 @@ final class HubStore: ObservableObject {
             Haptics.failure()
             return false
         }
-        say("Gesendet …")
+        // An instance that is offline right now - the phone's watchdog may be
+        // restarting it - gets its command when it is back: the server keeps
+        // it five minutes. One that is online has to take it within 12 s.
+        let wasOnline = overview?.agents.first { $0.id == agent }?.online ?? true
+        say(wasOnline ? "Gesendet …" : "Instanz ist offline – der Befehl wartet bis zu 5 min auf sie")
         let start = Date()
-        let deadline = start.addingTimeInterval(Double(patience) * 2 + 15)
+        let deadline = start.addingTimeInterval(wasOnline ? Double(patience) * 2 + 15 : 300 + Double(patience) * 2)
         var step = "queued"
+        var misses = 0
         while Date() < deadline {
             guard let now = try? await api.commandState(id, after: step, wait: 12) else {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                // the way there failed, not the command: try again, a bit slower each time
+                misses += 1
+                try? await Task.sleep(nanoseconds: UInt64(min(misses, 5)) * 1_000_000_000)
                 continue
             }
+            misses = 0
             if now.state == step {
-                // nothing moved: a script that has not even taken it is not there
-                if step == "queued" && Date().timeIntervalSince(start) > 12 {
+                // nothing moved: a script that is online and has not even taken it is not there
+                if wasOnline && step == "queued" && Date().timeIntervalSince(start) > 12 {
                     say("Das Script nimmt nichts an – ist die Instanz online?")
                     Haptics.failure()
                     return false
@@ -225,7 +269,8 @@ final class HubStore: ObservableObject {
                 break
             }
         }
-        say(step == "running" ? "Läuft noch – das Ergebnis kommt in der Liste an." : "Keine Antwort vom Script.")
+        say(step == "running" ? "Läuft noch – das Ergebnis kommt in der Liste an."
+            : (wasOnline ? "Keine Antwort vom Script." : "Instanz kam in 5 min nicht wieder – Befehl verfallen."))
         return false
     }
 

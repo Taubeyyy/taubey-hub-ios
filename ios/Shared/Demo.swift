@@ -68,6 +68,7 @@ enum Demo {
         return """
         [{"id":1,"kind":"catch","title":"Rubie Hoshi [Electric]","detail":"Divine","at":\(t - 40),"account":"Taubeyyyy","game":"Fish an Anime RNG"},
          {"id":2,"kind":"server","title":"Rejoined after: teleported by the game","detail":"afk screen off, fps cap 60 · Potassium","at":\(t - 600),"account":"Alt","game":"Fish an Anime RNG"},
+         {"id":6,"kind":"server","title":"Watchdog: neu gestartet","detail":"hing - 4 min keine Meldung","at":\(t - 1200),"account":"Taubeyyyy","game":"Fish an Anime RNG"},
          {"id":3,"kind":"catch","title":"Kaneko II [Void]","detail":"Celestial","at":\(t - 1500),"account":"Alt","game":"Fish an Anime RNG"},
          {"id":4,"kind":"trouble","title":"no catches for 10 min","detail":"","at":\(t - 5400),"account":"Alt","game":"Fish an Anime RNG"},
          {"id":5,"kind":"catch","title":"AI Hoshi","detail":"God","at":\(t - 9000),"account":"Taubeyyyy","game":"Fish an Anime RNG"}]

@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A character's picture in a frame of its rarity's colours; a figure when
-/// there is no picture.
+/// A character's picture in a frame of its rarity's colours. Without a
+/// picture (none exists yet, or it is still loading) its initials in the
+/// rarity's colours - so a missing picture looks meant, not broken.
 struct Portrait: View {
     let name: String
     let game: String
@@ -10,13 +11,18 @@ struct Portrait: View {
     var radius: CGFloat = 14
 
     var body: some View {
-        AsyncImage(url: HubAPI.imageURL(game: game, name: name)) { phase in
+        AsyncImage(url: HubAPI.imageURL(game: game, name: name), transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
             if let image = phase.image {
                 image.resizable().scaledToFill()
+                    .transition(.opacity)
             } else {
-                Image(systemName: "person.fill")
-                    .font(.system(size: size * 0.38))
-                    .foregroundColor(Theme.color(rarity: rarity).opacity(0.7))
+                Text(Portrait.initials(name))
+                    .font(.system(size: size * 0.34, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.gradient(rarity: rarity))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .padding(size * 0.08)
+                    .shadow(color: Theme.color(rarity: rarity).opacity(0.5), radius: size * 0.08)
             }
         }
         .frame(width: size, height: size)
@@ -30,6 +36,16 @@ struct Portrait: View {
                 .strokeBorder(Theme.gradient(rarity: rarity), lineWidth: 2)
         )
         .shadow(color: Theme.color(rarity: rarity).opacity(0.35), radius: 8, y: 2)
+    }
+
+    /// "Mari Kita II" -> "MK", "CeCe" -> "Ce", "AI Hoshi" -> "AH"
+    static func initials(_ name: String) -> String {
+        let words = name.split(separator: " ").map(String.init).filter { !$0.isEmpty }
+        // a trailing roman numeral is a version, not a name
+        let named = words.filter { !$0.allSatisfy { "IVX".contains($0) } || words.count == 1 }
+        if named.count >= 2 { return named.prefix(2).compactMap { $0.first }.map { String($0).uppercased() }.joined() }
+        guard let one = named.first ?? words.first else { return "?" }
+        return String(one.prefix(2)).capitalized
     }
 }
 

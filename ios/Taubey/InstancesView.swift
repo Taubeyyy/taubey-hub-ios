@@ -93,6 +93,13 @@ struct InstancesView: View {
 
 struct AgentRow: View {
     let agent: Agent
+    @EnvironmentObject var store: HubStore
+
+    /// the phone's watchdog restarted it in the last six hours
+    private var watchdog: HubEvent? {
+        guard let e = store.lastWatchdog(agent.account), Date().timeIntervalSince(e.at) < 6 * 3600 else { return nil }
+        return e
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -113,6 +120,10 @@ struct AgentRow: View {
                 }
                 Text(agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline · vor \(Format.duration(Double(agent.age ?? 0)))")
                     .font(.system(size: 13)).foregroundColor(Theme.muted).lineLimit(1)
+                if let w = watchdog {
+                    Label("Watchdog \(Format.ago(w.at)): \(w.detail)", systemImage: "arrow.counterclockwise.circle")
+                        .font(.system(size: 11)).foregroundColor(w.kind == "trouble" ? Theme.warn : Theme.faint).lineLimit(1)
+                }
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {

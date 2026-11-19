@@ -129,7 +129,9 @@ check(AlertLogic.wentOffline(previous: [], agents: agentsNow).isEmpty, "nothing 
 
 // the simulator tour's sample data has to parse like the real thing
 let demoOverview = Overview(Demo.answer("/api/overview?range=session"))
-check(demoOverview.agents.count == 2 && demoOverview.events.count == 5, "demo overview got \(demoOverview.agents.count)/\(demoOverview.events.count)")
+check(demoOverview.agents.count == 2 && demoOverview.events.count == 6, "demo overview got \(demoOverview.agents.count)/\(demoOverview.events.count)")
+// the watchdog's restarts come in as events of their own
+check(demoOverview.events.contains { $0.title.hasPrefix("Watchdog") && $0.account == "Taubeyyyy" }, "demo watchdog event")
 check(Overview(Demo.answer("/api/overview?range=session&account=Alt")).agents.count == 1, "demo account filter")
 // nothing the script reports is dropped: gems and food in the totals, every
 // metric either in the script's own lines or in the extra ones, never twice

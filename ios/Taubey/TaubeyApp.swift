@@ -106,13 +106,14 @@ struct RootView: View {
             await Notifier.shared.requestPermission()
             Notifier.shared.registerForPush()
         }
-        // every ten seconds while the app is open - the scripts report every
-        // fifteen, so this never shows anything more than one beat old
+        // every five seconds while the app is open - an open app makes the
+        // scripts report every three (the server's fast mode), so what you see
+        // is never more than a few seconds old
         .task(id: phase) {
             guard phase == .active else { return }
             while !Task.isCancelled {
                 await store.refresh()
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
             }
         }
     }

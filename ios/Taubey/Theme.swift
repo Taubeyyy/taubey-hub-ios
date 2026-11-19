@@ -89,39 +89,103 @@ enum Theme {
 
 // MARK: - the background: soft leaves and the flowing tube, nothing else
 
+/// The leaves and the tube drawn once into pictures, then only moved: an
+/// implicit animation started in onAppear (the first version) often never ran
+/// on the phone - the background just stood still - and redrawing big blurs
+/// every frame costs more than sliding a finished picture.
+struct AmbienceArt {
+    let size: CGSize
+    let leaf1: UIImage
+    let leaf2: UIImage
+    let tube: UIImage
+
+    /// Room around a leaf for its blur, so the edge of the picture never cuts it.
+    static let pad: CGFloat = 80
+
+    /// every screen has the same background: drawn once per screen size
+    @MainActor private static var made: [String: AmbienceArt] = [:]
+
+    @MainActor
+    static func make(size: CGSize) -> AmbienceArt? {
+        let w = size.width, h = size.height
+        guard w > 10, h > 10 else { return nil }
+        let key = "\(Int(w))x\(Int(h))"
+        if let done = made[key] { return done }
+        let art = draw(size: size)
+        if let art = art { made[key] = art }
+        return art
+    }
+
+    @MainActor
+    private static func draw(size: CGSize) -> AmbienceArt? {
+        let w = size.width, h = size.height
+        func render<V: View>(_ view: V, _ s: CGSize, scale: CGFloat) -> UIImage? {
+            let r = ImageRenderer(content: view.frame(width: s.width, height: s.height))
+            r.scale = scale
+            r.isOpaque = false
+            return r.uiImage
+        }
+        let l1 = CGSize(width: w * 1.25, height: w * 0.62), l2 = CGSize(width: w * 1.05, height: w * 0.52)
+        func leaf(_ s: CGSize) -> some View {
+            Leaf().frame(width: s.width, height: s.height).padding(pad)
+        }
+        // the leaves are a blur anyway: one pixel per point is plenty
+        guard let a = render(leaf(l1), CGSize(width: l1.width + pad * 2, height: l1.height + pad * 2), scale: 1),
+              let b = render(leaf(l2), CGSize(width: l2.width + pad * 2, height: l2.height + pad * 2), scale: 1),
+              let t = render(TubeShape(width: w, height: h), CGSize(width: w * 2, height: h), scale: 2)
+        else { return nil }
+        return AmbienceArt(size: size, leaf1: a, leaf2: b, tube: t)
+    }
+}
+
 struct Ambience: View {
     @Environment(\.accessibilityReduceMotion) private var still
-    @State private var drift = false
+    @State private var art: AmbienceArt?
 
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width, h = geo.size.height
-            ZStack {
-                Theme.ink
-                RadialGradient(colors: [Theme.accent.opacity(0.12), .clear], center: UnitPoint(x: 0.8, y: -0.05),
-                               startRadius: 0, endRadius: max(w, h) * 0.8)
-                Leaf()
-                    .frame(width: w * 1.25, height: w * 0.62)
-                    .rotationEffect(.degrees(drift ? -8 : -22))
-                    .offset(x: w * (drift ? 0.3 : 0.38), y: -h * (drift ? 0.34 : 0.4))
-                    .opacity(0.5)
-                    .animation(still ? nil : .easeInOut(duration: 19).repeatForever(autoreverses: true), value: drift)
-                Leaf()
-                    .frame(width: w * 1.05, height: w * 0.52)
-                    .rotationEffect(.degrees(drift ? 40 : 28))
-                    .offset(x: -w * (drift ? 0.3 : 0.4), y: h * (drift ? 0.36 : 0.42))
-                    .opacity(0.4)
-                    .animation(still ? nil : .easeInOut(duration: 23).repeatForever(autoreverses: true), value: drift)
-                Tube(still: still)
-                    .frame(width: w, height: h)
-                    .opacity(0.32)
-            }
-            .frame(width: w, height: h)
-            .clipped()
+            Theme.ink
+                .overlay(
+                    RadialGradient(colors: [Theme.accent.opacity(0.12), .clear], center: UnitPoint(x: 0.8, y: -0.05),
+                                   startRadius: 0, endRadius: max(w, h) * 0.8)
+                )
+                .overlay {
+                    if let art = art, art.size == geo.size {
+                        // 30 frames a second at most, nothing at all with Reduce Motion
+                        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: still)) { timeline in
+                            let t = still ? 0 : timeline.date.timeIntervalSinceReferenceDate
+                            let d1 = (sin(t * 2 * .pi / 38) + 1) / 2          // 0...1, one swing in 38 s
+                            let d2 = (sin(t * 2 * .pi / 46 + 1.3) + 1) / 2
+                            let flow = t.truncatingRemainder(dividingBy: 34) / 34
+                            ZStack {
+                                Image(uiImage: art.leaf1)
+                                    .rotationEffect(.degrees(-22 + 14 * d1))
+                                    .offset(x: w * (0.38 - 0.08 * d1), y: -h * (0.40 - 0.06 * d1))
+                                    .opacity(0.5)
+                                Image(uiImage: art.leaf2)
+                                    .rotationEffect(.degrees(28 + 12 * d2))
+                                    .offset(x: -w * (0.40 - 0.10 * d2), y: h * (0.42 - 0.06 * d2))
+                                    .opacity(0.4)
+                            }
+                            .frame(width: w, height: h)
+                            .overlay(alignment: .topLeading) {
+                                // two screens wide, the bend repeats every screen: sliding
+                                // one screen to the left and starting over is seamless
+                                Image(uiImage: art.tube)
+                                    .frame(width: w * 2, height: h)
+                                    .offset(x: -w * flow)
+                                    .opacity(0.32)
+                            }
+                        }
+                    }
+                }
+                .frame(width: w, height: h)
+                .clipped()
+                .task(id: geo.size) { art = AmbienceArt.make(size: geo.size) }
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .onAppear { drift = true }
     }
 }
 
@@ -148,17 +212,15 @@ struct LeafShape: Shape {
     }
 }
 
-/// The website's glossy tube. Drawn once, two screens wide with a bend that
-/// repeats every screen, and slid sideways forever - so the phone only moves
-/// a finished picture and never redraws it.
-struct Tube: View {
-    var still = false
-    @State private var flow = false
+/// The website's glossy tube, two screens wide with a bend that repeats every
+/// screen. Drawn once into a picture (AmbienceArt), which is then slid.
+struct TubeShape: View {
+    let width: CGFloat
+    let height: CGFloat
 
     var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width, h = geo.size.height
-            Canvas { ctx, size in
+        let w = width, h = height
+        Canvas { ctx, size in
                 let t = min(h, 900) * 0.05
                 func line(_ dy: CGFloat) -> Path {
                     var p = Path()
@@ -183,13 +245,8 @@ struct Tube: View {
                 stroke(-t * 0.3, t * 1.2, Color(hex: 0xC824B8), blur: t * 0.22)
                 stroke(-t * 0.5, t * 0.62, Color(hex: 0xF07FE4), blur: t * 0.2)
                 stroke(-t * 0.64, t * 0.2, Color(hex: 0xFFE0FA, opacity: 0.7), blur: t * 0.1)
-            }
-            .frame(width: w * 2, height: h)
-            .drawingGroup()
-            .offset(x: flow ? -w : 0)
-            .animation(still ? nil : .linear(duration: 34).repeatForever(autoreverses: false), value: flow)
-            .onAppear { flow = true }
         }
+        .frame(width: w * 2, height: h)
     }
 }
 
@@ -222,9 +279,10 @@ enum GrainTile {
 
 struct Grain: View {
     var body: some View {
+        // a hint of texture, no more: at 0.28 the glass looked rough
         Image(uiImage: GrainTile.image)
             .resizable(resizingMode: .tile)
-            .opacity(0.28)
+            .opacity(0.08)
             .allowsHitTesting(false)
     }
 }
