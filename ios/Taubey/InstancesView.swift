@@ -121,8 +121,14 @@ struct AgentRow: View {
                 Text(agent.online ? (agent.note.isEmpty ? "läuft" : Lingo.value(agent.note)) : "offline · vor \(Format.duration(Double(agent.age ?? 0)))")
                     .font(.system(size: 13)).foregroundColor(Theme.muted).lineLimit(1)
                 if let w = watchdog {
-                    Label("Watchdog \(Format.ago(w.at)): \(w.detail)", systemImage: "arrow.counterclockwise.circle")
-                        .font(.system(size: 11)).foregroundColor(w.kind == "trouble" ? Theme.warn : Theme.faint).lineLimit(1)
+                    // short: the whole reason is under Events
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise").font(.system(size: 9, weight: .bold))
+                        Text("Neustart \(Format.ago(w.at))")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(w.kind == "trouble" ? Theme.warn : Theme.faint)
+                    .lineLimit(1)
                 }
             }
             Spacer()

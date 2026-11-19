@@ -31,9 +31,14 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UIUserInterfaceStyle: Dark
-        # background refresh: iOS wakes the app now and then to look for news
-        UIBackgroundModes: [fetch]
-        BGTaskSchedulerPermittedIdentifiers: [com.taubey.hub.refresh]
+        # taubey://open?view=… - a tapped Bark message opens the app on its tab
+        # (every message comes through Bark since 2026-11-19; no background
+        # refresh any more, the app sends nothing of its own)
+        CFBundleURLTypes:
+          - CFBundleURLName: com.taubey.hub
+            CFBundleURLSchemes: [taubey]
+        # TrollStore's install link, for updates from inside the app
+        LSApplicationQueriesSchemes: [apple-magnifier]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.taubey.hub

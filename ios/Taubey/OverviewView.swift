@@ -23,6 +23,7 @@ struct OverviewView: View {
                         }
                     }
                     if let error = store.error { ErrorBanner(text: error) }
+                    if let update = store.update { UpdateBanner(release: update) }
                     if let o = store.shown {
                         tiles(o).appear(0)
                         if let next = o.nextRebirth { rebirth(next).appear(1) }

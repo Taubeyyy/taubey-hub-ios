@@ -16,9 +16,10 @@ enum PushLogic {
     /// Which tab a push opens, by the `view` the server puts in it.
     static func tab(for view: String) -> Int {
         switch view {
-        case "accounts", "sessions": return 1
+        case "accounts", "sessions", "instances": return 1
         case "inventory": return 2
         case "activity", "events": return 3
+        case "alerts", "account": return 4
         default: return 0
         }
     }
@@ -41,6 +42,10 @@ struct AlertSettings: Equatable {
     var catchNames: [String] = []
     var appPush = false
     var appDevices = 0
+    /// every message goes through Bark (since 2026-11-19): is a key saved?
+    var barkSet = false
+    /// the key's last four characters, to recognise it
+    var barkHint = ""
 
     init() {}
 
@@ -54,5 +59,7 @@ struct AlertSettings: Equatable {
         catchNames = a["catchNames"].strings
         appPush = j["apns"]["available"].bool ?? false
         appDevices = j["apns"]["devices"].int ?? 0
+        barkSet = j["barkSet"].bool ?? false
+        barkHint = j["barkHint"].string ?? ""
     }
 }

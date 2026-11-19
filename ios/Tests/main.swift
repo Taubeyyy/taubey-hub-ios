@@ -174,7 +174,27 @@ check(!PushLogic.working(json("{\"ok\":true,\"configured\":true,\"lastOk\":\"x\"
 let alertSettings = AlertSettings(json("{\"ok\":true,\"alerts\":{\"trouble\":false,\"silent\":true,\"back\":false,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":true,\"devices\":2}}"))
 check(!alertSettings.trouble && alertSettings.silent && !alertSettings.back && alertSettings.catches == "God", "alert settings read")
 check(alertSettings.appPush && alertSettings.appDevices == 2, "apns state read")
-check(AlertSettings(Demo.answer("/api/alerts")).appPush, "demo alerts")
+check(AlertSettings(Demo.answer("/api/alerts")).barkSet && AlertSettings(Demo.answer("/api/alerts")).barkHint == "…k3Qx", "demo alerts: bark")
+
+// a Bark push opens the app on the right tab
+check(HubLink.tab(for: URL(string: "taubey://open?view=activity")!) == 3, "bark link: events")
+check(HubLink.tab(for: URL(string: "taubey://open?view=sessions")!) == 1, "bark link: instances")
+check(HubLink.tab(for: URL(string: "taubey://open")!) == 0, "bark link: overview")
+check(HubLink.tab(for: URL(string: "https://taubey.com/dashboard")!) == nil, "only taubey:// links")
+check(HubLink.url(view: "activity") == "taubey://open?view=activity" && HubLink.url(view: "") == "taubey://open", "bark link built")
+
+// updates from GitHub's release page, installed by TrollStore
+let releaseJSON = json("""
+{"tag_name":"build-37","name":"Taubey Build 37","assets":[{"name":"Taubey.ipa","browser_download_url":"https://github.com/Taubeyyy/taubey-hub-ios/releases/download/build-37/Taubey.ipa"}]}
+""")
+if let r = AppRelease(releaseJSON) {
+    check(r.build == 37 && r.isNewer(than: 36) && !r.isNewer(than: 37), "release build number")
+    check(r.installURL?.absoluteString == "apple-magnifier://install?url=https://github.com/Taubeyyy/taubey-hub-ios/releases/download/build-37/Taubey.ipa",
+          "trollstore link: \(r.installURL?.absoluteString ?? "nil")")
+} else {
+    check(false, "release parsed")
+}
+check(AppRelease(json("{\"tag_name\":\"v1\",\"assets\":[]}")) == nil, "no ipa, no release")
 check(AlertSettings(json("{\"alerts\":{\"catches\":\"\",\"catchNames\":[\"AI Hoshi\"]}}")).catchNames == ["AI Hoshi"], "catch names read")
 
 // a catch is announced by the server's rule: the floor set under Alerts, or a watched name

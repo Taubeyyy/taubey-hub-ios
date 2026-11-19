@@ -158,8 +158,6 @@ final class HubStore: ObservableObject {
             overview = o
             if !o.who.isEmpty { who = o.who }
             lastUpdate = Date()
-            await Notifier.shared.refreshCatchRule(api)
-            Notifier.shared.check(events: o.events, agents: o.agents, ladder: o.ladder)
         }
         let picked = account
         if !picked.isEmpty {
@@ -276,6 +274,47 @@ final class HubStore: ObservableObject {
 
     /// When a command last finished - views that show its effect reload then.
     @Published var lastCommandAt: Date?
+
+    // MARK: updates
+
+    /// A newer build on GitHub than the one running, nil when there is none.
+    @Published var update: AppRelease?
+    @Published var updateCheckedAt: Date?
+
+    /// The build that runs (CI writes the build number into CFBundleVersion).
+    static var runningBuild: Int {
+        Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
+    }
+
+    /// Asks GitHub for the newest release - the repo is public, no login. At
+    /// most every 20 minutes unless `force`.
+    func checkUpdate(force: Bool = false) async {
+        if !force, let last = updateCheckedAt, Date().timeIntervalSince(last) < 1200 { return }
+        updateCheckedAt = Date()
+        if api.demo {
+            update = AppRelease(build: 999, ipa: URL(string: "https://github.com/Taubeyyy/taubey-hub-ios/releases")!, title: "Taubey Build 999")
+            return
+        }
+        var request = URLRequest(url: AppRelease.latestURL)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("TaubeyHub-iOS", forHTTPHeaderField: "User-Agent")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONValue.parse(data),
+              let release = AppRelease(json) else { return }
+        update = release.isNewer(than: HubStore.runningBuild) ? release : nil
+    }
+
+    /// Hands the new build to TrollStore, which installs it over this app.
+    func installUpdate() {
+        guard let link = update?.installURL else { return }
+        Haptics.tap()
+        UIApplication.shared.open(link) { opened in
+            if !opened {
+                Task { @MainActor in self.say("TrollStore hat den Link nicht angenommen – in TrollStore die URL-Scheme-Option einschalten") }
+            }
+        }
+    }
 
     func setPaused(_ paused: Bool, agent: Agent) async {
         if await call({

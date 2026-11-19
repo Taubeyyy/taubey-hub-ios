@@ -26,9 +26,9 @@ enum Demo {
                 + "{\"game\":\"Fish an Anime RNG\",\"name\":\"Kafka\",\"rarity\":\"Ancient\"}]}")
         }
         if p.hasPrefix("/api/command") { return json("{\"ok\":true,\"sent\":1,\"ids\":[7]}") }
-        if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"apns\":1,\"apnsErrors\":[]}") }
+        if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"bark\":true,\"barkError\":null}") }
         if p.hasPrefix("/api/alerts") {
-            return json("{\"ok\":true,\"alerts\":{\"trouble\":true,\"silent\":true,\"back\":true,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":true,\"devices\":1}}")
+            return json("{\"ok\":true,\"alerts\":{\"trouble\":true,\"silent\":true,\"back\":true,\"summary\":true,\"catches\":\"God\"},\"apns\":{\"available\":false,\"devices\":0},\"barkSet\":true,\"barkHint\":\"…k3Qx\"}")
         }
         return json("{\"ok\":true,\"applied\":1,\"sent\":1}")
     }

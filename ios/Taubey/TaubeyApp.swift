@@ -51,12 +51,8 @@ struct TaubeyApp: App {
             .tint(Theme.accent2)
             .toggleStyle(CheckToggleStyle())
         }
-        .onChange(of: phase) { now in
-            if now == .background && store.signedIn { notifier.scheduleRefresh() }
-        }
-        .backgroundTask(.appRefresh(Notifier.refreshTask)) {
-            await Notifier.shared.backgroundCheck()
-        }
+        // No background checks and no notifications of its own any more: since
+        // 2026-11-19 every message comes through Bark, which opens this app.
     }
 }
 
@@ -99,18 +95,20 @@ struct RootView: View {
             }
         }
         .animation(Motion.snap, value: store.toast)
-        // asks once; afterwards this only reads the answer - then the token
-        // for real push, which iOS hands over again on every start
+        // a tapped Bark message: taubey://open?view=… lands on its tab
+        .onOpenURL { url in
+            if let wanted = HubLink.tab(for: url) { tab = wanted }
+        }
         .task {
             Heads.shared.api = store.api
-            await Notifier.shared.requestPermission()
-            Notifier.shared.registerForPush()
+            await store.checkUpdate()
         }
         // every five seconds while the app is open - an open app makes the
         // scripts report every three (the server's fast mode), so what you see
         // is never more than a few seconds old
         .task(id: phase) {
             guard phase == .active else { return }
+            await store.checkUpdate()
             while !Task.isCancelled {
                 await store.refresh()
                 try? await Task.sleep(nanoseconds: 5_000_000_000)

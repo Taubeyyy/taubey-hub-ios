@@ -30,6 +30,28 @@ struct AccountView: View {
                 }
                 .rowSurface()
 
+                // updates: GitHub's newest build, installed by TrollStore over this app
+                Section {
+                    if let update = store.update {
+                        Button { store.installUpdate() } label: {
+                            Label("\(update.title) installieren", systemImage: "arrow.down.app.fill")
+                                .foregroundColor(Theme.accent2)
+                        }
+                    } else {
+                        Label("Neueste Version", systemImage: "checkmark.seal")
+                            .foregroundColor(Theme.muted)
+                    }
+                    Button { Task { await store.checkUpdate(force: true); store.say(store.update == nil ? "Keine neuere Version" : "Update gefunden") } } label: {
+                        Label("Nach Updates suchen", systemImage: "arrow.clockwise")
+                    }
+                } header: {
+                    Text("App · Build \(HubStore.runningBuild)")
+                } footer: {
+                    Text("Installiert über TrollStore direkt von GitHub. Passiert nichts, in TrollStore unter Einstellungen „URL Scheme“ einschalten.")
+                        .foregroundColor(Theme.faint)
+                }
+                .rowSurface()
+
                 PushSection()
 
                 if let o = store.overview, !o.groups.isEmpty, o.groups.contains(where: { !$0.name.isEmpty }) {
