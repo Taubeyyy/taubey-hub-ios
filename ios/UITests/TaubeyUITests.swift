@@ -173,6 +173,15 @@ final class TaubeyUITests: XCTestCase {
         app.swipeUp()
         sleep(1)
         shot("14-konto-unten")
+        // a note for Claude on the server
+        let feedback = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Feedback an Claude'")).firstMatch
+        if feedback.waitForExistence(timeout: 3) {
+            feedback.tap()
+            sleep(2)
+            shot("14a-feedback")
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            sleep(1)
+        }
         // pictures by hand: the list, and one character's sheet
         let missing = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Fehlende Charakterbilder'")).firstMatch
         if missing.waitForExistence(timeout: 3) {

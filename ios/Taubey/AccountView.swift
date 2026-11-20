@@ -44,10 +44,15 @@ struct AccountView: View {
                     Button { Task { await store.checkUpdate(force: true); store.say(store.update == nil ? "Keine neuere Version" : "Update gefunden") } } label: {
                         Label("Nach Updates suchen", systemImage: "arrow.clockwise")
                     }
+                    NavigationLink {
+                        FeedbackView()
+                    } label: {
+                        Label("Feedback an Claude", systemImage: "bubble.left.and.text.bubble.right")
+                    }
                 } header: {
                     Text("App · Build \(HubStore.runningBuild)")
                 } footer: {
-                    Text("Installiert über TrollStore direkt von GitHub. Passiert nichts, in TrollStore unter Einstellungen „URL Scheme“ einschalten.")
+                    Text("Updates installiert TrollStore direkt von GitHub (passiert nichts: in TrollStore „URL Scheme“ einschalten). Feedback geht an Claude auf dem Server – er baut es, das Update kommt hier an.")
                         .foregroundColor(Theme.faint)
                 }
                 .rowSurface()

@@ -149,6 +149,37 @@ final class HubAPI {
         return data
     }
 
+    // MARK: - feedback for Claude on the server
+
+    /// Where a note for Claude goes: the hub on the Dopa server, project
+    /// Taubey. It shows up in Edwin's Claude app; Claude only works on what
+    /// is picked there.
+    static let feedbackURL = URL(string: "https://dopa.taubey.com/api/hub/feedback/taubey")!
+
+    /// Sends a note (what bothers, what is missing). `screen`: where it came from.
+    func sendFeedback(_ text: String, screen: String) async throws {
+        if demo { return }
+        var r = URLRequest(url: HubAPI.feedbackURL)
+        r.httpMethod = "POST"
+        r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        r.setValue("TaubeyHub-iOS", forHTTPHeaderField: "User-Agent")
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        r.httpBody = JSONValue.object([
+            "text": .string(text), "screen": .string(screen), "build": .string(build), "device": .string("iPhone"),
+        ]).encoded()
+        let data: Data, response: URLResponse
+        do {
+            (data, response) = try await http.data(for: r)
+        } catch {
+            throw APIError.offline(error.localizedDescription)
+        }
+        let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if code >= 200 && code < 300 { return }
+        let json = (try? JSONValue.parse(data)) ?? .null
+        if let text = json["error"].string { throw APIError.server(text) }
+        throw APIError.http(code)
+    }
+
     // MARK: - calls the app makes
 
     /// The characters of this owner that no picture answers for yet.
