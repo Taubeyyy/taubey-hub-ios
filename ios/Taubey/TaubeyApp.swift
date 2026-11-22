@@ -73,8 +73,10 @@ struct RootView: View {
             InventoryView()
                 .tabItem { Label("Inventar", systemImage: "shippingbox") }
                 .tag(2)
-            EventsView()
-                .tabItem { Label("Events", systemImage: "bell") }
+            // Trade took the Events' place on 2026-11-23; the events open from
+            // the bell on the overview
+            TradeView()
+                .tabItem { Label("Trade", systemImage: "arrow.left.arrow.right") }
                 .tag(3)
             AccountView()
                 .tabItem { Label("Konto", systemImage: "person.crop.circle") }
@@ -98,6 +100,9 @@ struct RootView: View {
         // a tapped Bark message: taubey://open?view=… lands on its tab
         .onOpenURL { url in
             if let wanted = HubLink.tab(for: url) { tab = wanted }
+            // events: the overview opens them as a sheet
+            let view = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "view" }?.value ?? ""
+            if view == "activity" || view == "events" { store.openEvents = true }
         }
         .task {
             Heads.shared.api = store.api

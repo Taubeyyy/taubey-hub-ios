@@ -18,7 +18,9 @@ enum PushLogic {
         switch view {
         case "accounts", "sessions", "instances": return 1
         case "inventory": return 2
-        case "activity", "events": return 3
+        // the events live on the overview since Trade took their tab
+        case "activity", "events": return 0
+        case "trade": return 3
         case "alerts", "account": return 4
         default: return 0
         }

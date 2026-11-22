@@ -177,9 +177,22 @@ final class TaubeyUITests: XCTestCase {
         }
         let chars = app.buttons["Charaktere"].firstMatch
         if chars.waitForExistence(timeout: 3) { chars.tap() }
-        tab("Events")
-        sleep(2)
-        shot("12-events")
+        // trading: the open trade comes up by itself, full screen
+        tab("Trade")
+        sleep(4)
+        shot("12-trade-fenster")
+        app.swipeUp()
+        sleep(1)
+        shot("12a-trade-items")
+        let closeTrade = app.buttons["tradeClose"].firstMatch
+        if closeTrade.waitForExistence(timeout: 3) {
+            closeTrade.tap()
+            sleep(2)
+        }
+        shot("12b-trade")
+        app.swipeUp()
+        sleep(1)
+        shot("12c-trade-unten")
         tab("Konto")
         sleep(1)
         shot("13-konto")
@@ -207,6 +220,15 @@ final class TaubeyUITests: XCTestCase {
                 sleep(2)
                 shot("16-bild-aufnehmen")
             }
+        }
+        // the events, from the bell on the overview (their tab went to Trade)
+        tab("Übersicht")
+        sleep(1)
+        let bell = app.buttons["openEvents"].firstMatch
+        if bell.waitForExistence(timeout: 3) {
+            bell.tap()
+            sleep(2)
+            shot("17-events")
         }
     }
 

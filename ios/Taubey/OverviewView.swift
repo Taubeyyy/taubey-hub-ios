@@ -10,6 +10,8 @@ struct OverviewView: View {
     @State private var allRarities = false
     /// the point under the finger while it rests on the chart
     @State private var picked: HistoryPoint?
+    /// all events, from the bell (their tab went to Trade)
+    @State private var showEvents = false
 
     private let ranges: [(String, String)] = [("session", "Session"), ("today", "Heute"), ("7d", "7 Tage"), ("all", "Alles")]
 
@@ -46,9 +48,19 @@ struct OverviewView: View {
             .screenBackground()
             .navigationTitle(store.who.isEmpty ? "Übersicht" : "Hi, \(store.who)")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button { showEvents = true } label: { Image(systemName: "bell") }
+                        .accessibilityIdentifier("openEvents")
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     LiveChip(online: (store.overview?.online ?? 0) > 0, at: store.lastUpdate)
                 }
+            }
+            .sheet(isPresented: $showEvents) {
+                EventsView().presentationDragIndicator(.visible)
+            }
+            .onChange(of: store.openEvents) { wanted in
+                if wanted { showEvents = true; store.openEvents = false }
             }
             .onChange(of: store.account) { _ in Task { await store.refresh() } }
             .task(id: "\(metric)-\(hours)-\(store.account)") { await loadHistory() }
