@@ -5,6 +5,7 @@ struct EventsView: View {
     @State private var events: [HubEvent] = []
     @State private var kind = ""
     @State private var loaded = false
+    @Environment(\.dismiss) private var dismiss
 
     private let kinds: [(String, String)] = [("", "Alle"), ("catch", "Fänge"), ("trouble", "Probleme"), ("server", "Server")]
 
@@ -40,6 +41,14 @@ struct EventsView: View {
             .screenBackground()
             .refreshable { await load() }
             .navigationTitle("Events")
+            .toolbar {
+                // a sheet from the overview's bell since Trade took the tab
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Fertig") { dismiss() }
+                        .font(.system(size: 16, weight: .semibold))
+                        .accessibilityIdentifier("closeEvents")
+                }
+            }
             .task(id: kind) { await load() }
         }
     }

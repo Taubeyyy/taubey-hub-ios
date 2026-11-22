@@ -56,6 +56,8 @@ final class HubStore: ObservableObject {
     @Published var error: String?
     @Published var lastUpdate: Date?
     @Published var toast: String?
+    /// A Bark link to the events: the overview opens them (their tab is Trade now).
+    @Published var openEvents = false
     /// The cloud phone's watchdog (Instances tab): paused, listening, version.
     @Published var watchdog: WatchdogState?
     private var watchdogAt: Date?

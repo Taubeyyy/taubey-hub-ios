@@ -15,6 +15,7 @@ enum Demo {
         if p.hasSuffix("/schema") { return json(schema) }
         if p.hasSuffix("/config") && p.hasPrefix("/api/game/") { return json("{\"ok\":true,\"config\":{\"AutoFish\":true,\"HubFpsCap\":60}}") }
         if p.hasSuffix("/plot") && p.hasPrefix("/api/agent/") { return json(plot) }
+        if p.hasSuffix("/trade") && p.hasPrefix("/api/agent/") { return json(trade) }
         if p.hasSuffix("/commands") && p.hasPrefix("/api/agent/") {
             return json("{\"ok\":true,\"rows\":[{\"id\":7,\"cmd\":\"stand.swap\",\"done\":true,\"result\":{\"ok\":true,\"note\":\"placed Lula (Ancient) instead of Froza\"}}]}")
         }
@@ -42,6 +43,31 @@ enum Demo {
     private static func json(_ text: String) -> JSONValue {
         (try? JSONValue.parse(Data(text.utf8))) ?? .null
     }
+
+    /// A trade like the one recorded on 2026-11-23 (helper and main), with a
+    /// request from someone else waiting on top.
+    static let trade = """
+    {"ok":true,"v":7,"age":1,"trade":{"open":true,"sid":"c657","partner":{"id":7915890755,"name":"Taubey","trusted":true},
+     "self":[{"gk":"M|HeavenlyStar","n":1,"kind":"mat","name":"Heavenly Star","mut":"","level":0,"rarity":""},
+             {"gk":"C|Orihira||L315","n":1,"kind":"char","name":"Orihira","mut":"","level":315,"rarity":"Ancient"}],
+     "other":[{"gk":"C|Changlia||L357","n":1,"kind":"char","name":"Changlia","mut":"","level":357,"rarity":"Ancient"}],
+     "selfAccepted":false,"otherAccepted":true,"selfFee":300000,"otherFee":300000,"why":"you give something - confirm it yourself",
+     "request":{"id":171283445,"name":"Mystisyde","trusted":false,"left":14},
+     "players":[{"id":7915890755,"name":"Taubey","display":"Taubey","trusted":true},{"id":171283445,"name":"Mystisyde","display":"Mysti","trusted":false},
+                {"id":2531120221,"name":"AresFnbr","display":"AresFnbr","trusted":false}],
+     "trusted":[{"id":7915890755,"name":"Taubey"}],
+     "log":["03:13  with Taubey: got Changlia Ancient L357 · gave Heavenly Star · fee 300K gems","03:12  took the request from Taubey"],
+     "settings":{"take":true,"confirm":true,"onlyReceive":true,"maxFee":"1M","ask":true,"declineOthers":false,"push":true,"window":false},
+     "items":[{"gk":"C|Kafkia||L404","k":"char","n":"Kafkia","r":"Ancient","m":"","l":404,"q":1,"c":138000000000},
+              {"gk":"C|Madoki Kaneme|Sinister|L440","k":"char","n":"Madoki Kaneme","r":"Celestial","m":"Sinister","l":440,"q":1,"c":3500000000},
+              {"gk":"C|Orihira||L315","k":"char","n":"Orihira","r":"Ancient","m":"","l":315,"q":1,"c":17800000000},
+              {"gk":"C|Miki||L314","k":"char","n":"Miki","r":"Ancient","m":"","l":314,"q":1,"c":17800000000,"lk":true},
+              {"gk":"C|Reia II|","k":"char","n":"Reia II","r":"Ascended","m":"","l":1,"q":3845,"c":228571},
+              {"gk":"C|Sukana|Void","k":"char","n":"Sukana","r":"Rainbow","m":"Void","l":1,"q":80,"c":229998},
+              {"gk":"M|HeavenlyStar","k":"mat","n":"Heavenly Star","r":"","m":"","l":0,"q":56,"c":0},
+              {"gk":"M|ForgottenLostPieces","k":"mat","n":"Forgotten Lost Pieces","r":"","m":"","l":0,"q":20,"c":0},
+              {"gk":"P|HeavenCollide","k":"potion","n":"Heaven Collide","r":"","m":"","l":0,"q":1,"c":0}]}}
+    """
 
     /// A plot like the main's on 2026-11-13 (full dump), shortened.
     static let plot = """

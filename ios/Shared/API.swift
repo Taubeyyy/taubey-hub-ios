@@ -182,6 +182,15 @@ final class HubAPI {
 
     // MARK: - calls the app makes
 
+    /// One instance's trade as the script last posted it. With the version the
+    /// app has, the server waits (up to `wait` s) for a newer one. nil = the
+    /// script has said nothing about trading yet.
+    func tradeLive(agent: String, version: Int, wait: Int = 15) async throws -> (version: Int, live: TradeLive?) {
+        let j = try await get("/api/agent/\(HubAPI.agentPath(agent))/trade?v=\(version)&wait=\(wait)")
+        let trade = j["trade"]
+        return (j["v"].int ?? 0, trade.isNull ? nil : TradeLive(trade))
+    }
+
     /// The cloud phone's watchdog: paused, listening, which version.
     func watchdogState() async throws -> WatchdogState {
         WatchdogState(try await get("/api/watchdog/state"))

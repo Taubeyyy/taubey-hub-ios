@@ -44,6 +44,18 @@ final class TaubeyUITests: XCTestCase {
             if all.exists { all.tap() }
         }
 
+        // the events, from the bell on the overview (their tab went to Trade);
+        // a pull down at the top of the sheet closes it again
+        let bell = app.buttons["openEvents"].firstMatch
+        if bell.waitForExistence(timeout: 3) {
+            bell.tap()
+            sleep(2)
+            shot("04a-events")
+            let done = app.buttons["closeEvents"].firstMatch
+            if done.waitForExistence(timeout: 3) { done.tap() }
+            sleep(1)
+        }
+
         tab("Instanzen")
         sleep(1)
         shot("05-instanzen")
@@ -177,9 +189,22 @@ final class TaubeyUITests: XCTestCase {
         }
         let chars = app.buttons["Charaktere"].firstMatch
         if chars.waitForExistence(timeout: 3) { chars.tap() }
-        tab("Events")
-        sleep(2)
-        shot("12-events")
+        // trading: the open trade comes up by itself, full screen
+        tab("Trade")
+        sleep(4)
+        shot("12-trade-fenster")
+        app.swipeUp()
+        sleep(1)
+        shot("12a-trade-items")
+        let closeTrade = app.buttons["tradeClose"].firstMatch
+        if closeTrade.waitForExistence(timeout: 3) {
+            closeTrade.tap()
+            sleep(2)
+        }
+        shot("12b-trade")
+        app.swipeUp()
+        sleep(1)
+        shot("12c-trade-unten")
         tab("Konto")
         sleep(1)
         shot("13-konto")
@@ -218,7 +243,8 @@ final class TaubeyUITests: XCTestCase {
     }
 
     private func tab(_ name: String) {
-        let button = app.tabBars.buttons[name].firstMatch
+        // our own bar (TabBar) - its buttons are "tab-<title>"
+        let button = app.buttons["tab-\(name)"].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 5), "tab \(name) missing")
         button.tap()
     }
