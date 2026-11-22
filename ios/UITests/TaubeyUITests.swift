@@ -51,12 +51,9 @@ final class TaubeyUITests: XCTestCase {
             bell.tap()
             sleep(2)
             shot("04a-events")
-            app.swipeDown(velocity: .fast)
+            let done = app.buttons["closeEvents"].firstMatch
+            if done.waitForExistence(timeout: 3) { done.tap() }
             sleep(1)
-            if !app.buttons["tab-Instanzen"].isHittable {
-                app.swipeDown(velocity: .fast)
-                sleep(1)
-            }
         }
 
         tab("Instanzen")

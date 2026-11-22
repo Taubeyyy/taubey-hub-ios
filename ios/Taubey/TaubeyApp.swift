@@ -81,6 +81,14 @@ struct RootView: View {
                 .init(tag: 3, title: "Trade", icon: "arrow.left.arrow.right"),
                 .init(tag: 4, title: "Konto", icon: "person.crop.circle"),
             ])
+            // what scrolls under the bar fades into the dark down to the edge,
+            // instead of showing through beneath it
+            .background(alignment: .bottom) {
+                LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.92)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 120)
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
+            }
         }
         // a tapped notification lands on the tab it is about
         .onChange(of: notifier.openTab) { wanted in
