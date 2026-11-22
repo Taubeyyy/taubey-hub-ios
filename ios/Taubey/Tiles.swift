@@ -9,9 +9,16 @@ struct Portrait: View {
     let rarity: String
     var size: CGFloat = 56
     var radius: CGFloat = 14
+    /// bumped after a picture changed, so it is asked for again
+    var bust: Int = 0
+
+    private var url: URL? {
+        guard let url = HubAPI.imageURL(game: game, name: name) else { return nil }
+        return bust == 0 ? url : URL(string: url.absoluteString + "?v=\(bust)")
+    }
 
     var body: some View {
-        AsyncImage(url: HubAPI.imageURL(game: game, name: name), transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
+        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
             if let image = phase.image {
                 image.resizable().scaledToFill()
                     .transition(.opacity)
