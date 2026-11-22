@@ -26,7 +26,7 @@ struct TradeView: View {
             List {
                 if agents.count > 1 {
                     Section {
-                        AccountChips(selection: $account, accounts: agents.map { $0.account }) { name in
+                        AccountChips(selection: $account, accounts: agents.map { $0.account }, allowAll: false) { name in
                             agents.contains { $0.account == name && $0.online }
                         }
                     }
@@ -69,6 +69,8 @@ struct TradeView: View {
     /// Waits on the server for each new version; a fresh one replaces the old.
     private func follow() async {
         guard let id = agent?.id else { loaded = true; return }
+        // one account is always picked here - the chip shows which
+        if account.isEmpty, let first = agent?.account { account = first }
         version = 0
         live = nil
         loaded = false

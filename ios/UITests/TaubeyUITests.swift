@@ -44,6 +44,21 @@ final class TaubeyUITests: XCTestCase {
             if all.exists { all.tap() }
         }
 
+        // the events, from the bell on the overview (their tab went to Trade);
+        // a pull down at the top of the sheet closes it again
+        let bell = app.buttons["openEvents"].firstMatch
+        if bell.waitForExistence(timeout: 3) {
+            bell.tap()
+            sleep(2)
+            shot("04a-events")
+            app.swipeDown(velocity: .fast)
+            sleep(1)
+            if !app.buttons["tab-Instanzen"].isHittable {
+                app.swipeDown(velocity: .fast)
+                sleep(1)
+            }
+        }
+
         tab("Instanzen")
         sleep(1)
         shot("05-instanzen")
@@ -221,15 +236,6 @@ final class TaubeyUITests: XCTestCase {
                 shot("16-bild-aufnehmen")
             }
         }
-        // the events, from the bell on the overview (their tab went to Trade)
-        tab("Übersicht")
-        sleep(1)
-        let bell = app.buttons["openEvents"].firstMatch
-        if bell.waitForExistence(timeout: 3) {
-            bell.tap()
-            sleep(2)
-            shot("17-events")
-        }
     }
 
     func testSignIn() {
@@ -240,7 +246,8 @@ final class TaubeyUITests: XCTestCase {
     }
 
     private func tab(_ name: String) {
-        let button = app.tabBars.buttons[name].firstMatch
+        // our own bar (TabBar) - its buttons are "tab-<title>"
+        let button = app.buttons["tab-\(name)"].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 5), "tab \(name) missing")
         button.tap()
     }

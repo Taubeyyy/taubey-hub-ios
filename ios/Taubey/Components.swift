@@ -109,13 +109,15 @@ struct Avatar: View {
 struct AccountChips: View {
     @Binding var selection: String
     let accounts: [String]
+    /// false where one account has to be picked (trading)
+    var allowAll = true
     var online: (String) -> Bool = { _ in false }
     @Namespace private var pill
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                pill("", title: "Alle", dot: nil)
+                if allowAll { pill("", title: "Alle", dot: nil) }
                 ForEach(accounts, id: \.self) { name in pill(name, title: name, dot: online(name)) }
             }
             .padding(.horizontal, 2)

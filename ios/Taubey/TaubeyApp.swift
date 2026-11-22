@@ -63,24 +63,24 @@ struct RootView: View {
     @State private var tab = 0
 
     var body: some View {
+        // The system's bar is hidden on every tab; ours floats at the bottom
+        // (TabBar). Trade took the Events' place on 2026-11-23 - the events
+        // open from the bell on the overview.
         TabView(selection: $tab) {
-            OverviewView()
-                .tabItem { Label("Übersicht", systemImage: "square.grid.2x2") }
-                .tag(0)
-            InstancesView()
-                .tabItem { Label("Instanzen", systemImage: "desktopcomputer") }
-                .tag(1)
-            InventoryView()
-                .tabItem { Label("Inventar", systemImage: "shippingbox") }
-                .tag(2)
-            // Trade took the Events' place on 2026-11-23; the events open from
-            // the bell on the overview
-            TradeView()
-                .tabItem { Label("Trade", systemImage: "arrow.left.arrow.right") }
-                .tag(3)
-            AccountView()
-                .tabItem { Label("Konto", systemImage: "person.crop.circle") }
-                .tag(4)
+            OverviewView().tag(0).toolbar(.hidden, for: .tabBar)
+            InstancesView().tag(1).toolbar(.hidden, for: .tabBar)
+            InventoryView().tag(2).toolbar(.hidden, for: .tabBar)
+            TradeView().tag(3).toolbar(.hidden, for: .tabBar)
+            AccountView().tag(4).toolbar(.hidden, for: .tabBar)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            TabBar(selection: $tab, items: [
+                .init(tag: 0, title: "Übersicht", icon: "square.grid.2x2"),
+                .init(tag: 1, title: "Instanzen", icon: "desktopcomputer"),
+                .init(tag: 2, title: "Inventar", icon: "shippingbox"),
+                .init(tag: 3, title: "Trade", icon: "arrow.left.arrow.right"),
+                .init(tag: 4, title: "Konto", icon: "person.crop.circle"),
+            ])
         }
         // a tapped notification lands on the tab it is about
         .onChange(of: notifier.openTab) { wanted in
