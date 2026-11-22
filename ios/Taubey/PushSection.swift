@@ -104,7 +104,7 @@ struct PushSection: View {
     private var ladder: [String] {
         let l = store.overview?.ladder ?? []
         return l.isEmpty ? ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical", "Cosmic", "Secret", "Rainbow", "Ascended",
-                            "Divine", "Supreme", "Celestial", "Ancient", "God", "Omniscient", "Apex", "Transcendent", "Exclusive"] : l
+                            "Divine", "Supreme", "Celestial", "Ancient", "God", "Omniscient", "Apex", "Transcendent", "Paradox", "Exclusive"] : l
     }
 
     /// The catch floor, saved on the server at once - from there Bark and the

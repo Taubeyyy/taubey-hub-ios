@@ -56,7 +56,7 @@ enum Demo {
      "players":[{"id":7915890755,"name":"Taubey","display":"Taubey","trusted":true},{"id":171283445,"name":"Mystisyde","display":"Mysti","trusted":false},
                 {"id":2531120221,"name":"AresFnbr","display":"AresFnbr","trusted":false}],
      "trusted":[{"id":7915890755,"name":"Taubey"}],
-     "log":["03:13  with Taubey: got Changlia Ancient L357 · gave Heavenly Star · fee 300K gems","03:12  took the request from Taubey"],
+     "log":["03:13  mit Taubey: bekommen Changlia Ancient L357 · gegeben Heavenly Star · Gebühr 300K Gems","03:12  Anfrage von Taubey angenommen"],
      "settings":{"take":true,"confirm":true,"onlyReceive":true,"maxFee":"1M","ask":true,"declineOthers":false,"push":true,"window":false},
      "items":[{"gk":"C|Kafkia||L404","k":"char","n":"Kafkia","r":"Ancient","m":"","l":404,"q":1,"c":138000000000},
               {"gk":"C|Madoki Kaneme|Sinister|L440","k":"char","n":"Madoki Kaneme","r":"Celestial","m":"Sinister","l":440,"q":1,"c":3500000000},

@@ -180,7 +180,7 @@ struct TradeLive: Equatable {
 enum TradeLogic {
     /// The ladder, worst first - for sorting when the report has no ranks.
     static let ladder = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythical", "Cosmic", "Secret", "Rainbow", "Ascended",
-                         "Divine", "Supreme", "Celestial", "Ancient", "God", "Omniscient", "Apex", "Transcendent", "Exclusive"]
+                         "Divine", "Supreme", "Celestial", "Ancient", "God", "Omniscient", "Apex", "Transcendent", "Paradox", "Exclusive"]
 
     static func rank(_ rarity: String) -> Int { ladder.firstIndex(of: rarity) ?? -1 }
 

@@ -45,6 +45,7 @@ enum Theme {
         "Mythical": 0xFF5356, "Cosmic": 0x9659FF, "Secret": 0x9B9BB3, "Rainbow": 0xFFB15A, "Ascended": 0x59F1FF,
         "Divine": 0xFFD059, "Supreme": 0x59FF5E, "Celestial": 0x2185FF, "Ancient": 0xFFEC59, "God": 0xFF595C,
         "Omniscient": 0xFF595C, "Apex": 0x59F7FF, "Transcendent": 0x9C59FF, "Exclusive": 0x8860FF,
+        "Paradox": 0xFFD959,
     ]
     static let rarityGradient: [String: [UInt32]] = [
         "Common": [0xB0B0B0, 0x9C9C9C],
@@ -70,6 +71,9 @@ enum Theme {
         "Transcendent": [0x9955FF, 0x8863FF, 0xC226FF, 0xA14EFF, 0xC330FE, 0xC336FF, 0x8E61FF, 0x8560FF, 0xB93FFF,
                          0xA74EFF, 0x9E4EFF, 0xB247FF, 0x7369FF, 0xA74EFF, 0xA947FF],
         "Exclusive": [0xFF6AE6, 0xC93FFF, 0x6A63FF, 0xFF00D4],
+        // update 1.20 (look dump 2026-11-22): between Transcendent and Exclusive
+        "Paradox": [0xFFF6C8, 0xFFD84A, 0xFFAA2D, 0xFFE680, 0xFFF7D6, 0xFFC400, 0xFF9A22, 0xFFD84A, 0xFFF8D6, 0xFFB300,
+                    0xFF911F, 0xFFE27A, 0xFFF6C8],
     ]
 
     static func color(rarity: String) -> Color {
