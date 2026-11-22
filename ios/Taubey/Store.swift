@@ -56,6 +56,9 @@ final class HubStore: ObservableObject {
     @Published var error: String?
     @Published var lastUpdate: Date?
     @Published var toast: String?
+    /// The cloud phone's watchdog (Instances tab): paused, listening, version.
+    @Published var watchdog: WatchdogState?
+    private var watchdogAt: Date?
 
     let api: HubAPI
 
@@ -167,6 +170,31 @@ final class HubStore: ObservableObject {
             } else if let f = await call({ try await api.overview(range: range, account: picked) }), account == picked {
                 focus = f
             }
+        }
+        await refreshWatchdog()
+    }
+
+    /// Every 20 s at most (the phone asks every 15-30 s anyway); quiet - a
+    /// missing watchdog is no error banner.
+    func refreshWatchdog(force: Bool = false) async {
+        if !force, let at = watchdogAt, Date().timeIntervalSince(at) < 20 { return }
+        watchdogAt = Date()
+        if let w = try? await api.watchdogState() { watchdog = w }
+    }
+
+    /// Pause for `minutes` (0 = go on now). The phone picks it up within half a minute.
+    func pauseWatchdog(minutes: Int) async {
+        guard let w = await call({ try await api.pauseWatchdog(minutes: minutes) }) else {
+            Haptics.failure()
+            return
+        }
+        watchdog = w
+        watchdogAt = Date()
+        Haptics.success()
+        if minutes == 0 {
+            say("Watchdog läuft wieder – nach 3 min Schonfrist holt er Roblox zurück")
+        } else {
+            say("Watchdog pausiert bis \(WatchdogState.clock(w.pauseUntil ?? Date()))")
         }
     }
 

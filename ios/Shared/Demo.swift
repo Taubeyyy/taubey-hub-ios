@@ -25,6 +25,12 @@ enum Demo {
                 + "{\"game\":\"Fish an Anime RNG\",\"name\":\"Ronavia\",\"rarity\":\"Omniscient\"},"
                 + "{\"game\":\"Fish an Anime RNG\",\"name\":\"Kafka\",\"rarity\":\"Ancient\"}]}")
         }
+        if p.hasPrefix("/api/watchdog/pause") {
+            return json("{\"ok\":true,\"pauseUntil\":\(Int(now) + 3600),\"pauseLeft\":3600,\"seenAgo\":12,\"version\":7,\"latest\":7}")
+        }
+        if p.hasPrefix("/api/watchdog") {
+            return json("{\"ok\":true,\"pauseUntil\":0,\"pauseLeft\":0,\"seenAgo\":12,\"version\":7,\"latest\":7}")
+        }
         if p.hasPrefix("/api/command") { return json("{\"ok\":true,\"sent\":1,\"ids\":[7]}") }
         if p.hasPrefix("/api/alerts/test") { return json("{\"ok\":true,\"bark\":true,\"barkError\":null}") }
         if p.hasPrefix("/api/alerts") {

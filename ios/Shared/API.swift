@@ -182,6 +182,16 @@ final class HubAPI {
 
     // MARK: - calls the app makes
 
+    /// The cloud phone's watchdog: paused, listening, which version.
+    func watchdogState() async throws -> WatchdogState {
+        WatchdogState(try await get("/api/watchdog/state"))
+    }
+
+    /// Pauses the watchdog for `minutes` (0 = go on now); answers the new state.
+    func pauseWatchdog(minutes: Int) async throws -> WatchdogState {
+        WatchdogState(try await post("/api/watchdog/pause", .object(["minutes": .number(Double(minutes))])))
+    }
+
     /// The characters of this owner that no picture answers for yet.
     func missingPictures() async throws -> [MissingPicture] {
         (try await get("/api/pictures/missing")["rows"].array ?? []).compactMap(MissingPicture.init)

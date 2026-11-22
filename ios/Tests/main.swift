@@ -296,5 +296,20 @@ check(outcome?.done == true && outcome?.ok == false && outcome?.note == "not in 
 check(CommandOutcome(json("{\"id\":8,\"done\":false,\"result\":null}"))?.done == false, "command still out")
 check(HubAPI.agentPath("1|alt|fish an anime rng") == "1%7Calt%7Cfish%20an%20anime%20rng", "agent path got \(HubAPI.agentPath("1|alt|fish an anime rng"))")
 
+// MARK: watchdog (pause from the app)
+let wdNow = Date(timeIntervalSince1970: 1_795_373_000)
+let wdRun = WatchdogState(json("{\"ok\":true,\"pauseUntil\":0,\"pauseLeft\":0,\"seenAgo\":14,\"version\":7,\"latest\":7}"))
+check(wdRun.mood(now: wdNow) == .running && !wdRun.paused(now: wdNow) && !wdRun.needsInstall, "watchdog running")
+check(wdRun.detail(now: wdNow).hasSuffix("v7"), "running detail names the version got \(wdRun.detail(now: wdNow))")
+let wdPaused = WatchdogState(json("{\"pauseUntil\":1795376600,\"seenAgo\":5,\"version\":7,\"latest\":7}"))
+check(wdPaused.mood(now: wdNow) == .paused && wdPaused.paused(now: wdNow), "watchdog paused")
+check(!wdPaused.paused(now: Date(timeIntervalSince1970: 1_795_376_601)), "a pause runs out by itself")
+let wdOld = WatchdogState(json("{\"pauseUntil\":0,\"seenAgo\":20,\"version\":0,\"latest\":7,\"install\":\"curl x | sh\"}"))
+check(wdOld.needsInstall && wdOld.install == "curl x | sh", "a copy from before v7 needs one install")
+let wdQuiet = WatchdogState(json("{\"pauseUntil\":0,\"seenAgo\":900,\"version\":7,\"latest\":7}"))
+check(wdQuiet.mood(now: wdNow) == .quiet && !wdQuiet.needsInstall, "watchdog quiet")
+check(WatchdogState(json("{\"ok\":true,\"seenAgo\":null,\"latest\":7}")).mood(now: wdNow) == .unknown, "never seen")
+check(WatchdogState(Demo.answer("/api/watchdog/state")).listening, "demo watchdog listens")
+
 print("\(passed) passed, \(failures) failed")
 if failures > 0 { exit(1) }
