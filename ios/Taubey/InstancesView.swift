@@ -174,7 +174,10 @@ struct WatchdogCard: View {
     }
 
     private func pill(_ title: String, icon: String, tint: Color) -> some View {
-        Label(title, systemImage: icon)
+        HStack(spacing: 7) {
+            Image(systemName: icon).font(.system(size: 12, weight: .bold))
+            Text(title)
+        }
             .font(.system(size: 13.5, weight: .semibold))
             .foregroundColor(tint)
             .padding(.horizontal, 14)

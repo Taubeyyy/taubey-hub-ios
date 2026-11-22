@@ -47,6 +47,19 @@ final class TaubeyUITests: XCTestCase {
         tab("Instanzen")
         sleep(1)
         shot("05-instanzen")
+        // the watchdog's pause: the choices, then the paused card
+        let pause = app.buttons["watchdogPause"].firstMatch
+        if pause.waitForExistence(timeout: 3) {
+            pause.tap()
+            sleep(1)
+            shot("05a-watchdog-menue")
+            let hour = app.buttons["1 Stunde"].firstMatch
+            if hour.waitForExistence(timeout: 3) {
+                hour.tap()
+                sleep(2)
+                shot("05b-watchdog-pausiert")
+            }
+        }
         let main = app.staticTexts["Taubeyyyy"].firstMatch
         if main.waitForExistence(timeout: 3) {
             main.tap()
