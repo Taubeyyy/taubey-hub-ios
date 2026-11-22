@@ -28,6 +28,13 @@ struct InstancesView: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                 }
+                if let wd = store.watchdog {
+                    Section {
+                        WatchdogCard(state: wd).rowSurface()
+                    } header: {
+                        Text("Cloud-Handy").foregroundColor(Theme.muted)
+                    }
+                }
                 ForEach(games, id: \.self) { game in
                     Section {
                         NavigationLink {
@@ -88,6 +95,140 @@ struct InstancesView: View {
     private func order(_ a: Agent, _ b: Agent) -> Bool {
         if a.online != b.online { return a.online }
         return a.account.lowercased() < b.account.lowercased()
+    }
+}
+
+/// The cloud phone's watchdog: how it is, and the pause for playing on the
+/// phone yourself - it runs out by itself, and the phone picks it up within
+/// half a minute.
+struct WatchdogCard: View {
+    let state: WatchdogState
+    @EnvironmentObject var store: HubStore
+
+    var body: some View {
+        // the clock moves on by itself: a pause that ran out shows as running
+        TimelineView(.periodic(from: .now, by: 15)) { context in
+            content(now: context.date)
+        }
+    }
+
+    private func content(now: Date) -> some View {
+        let mood: WatchdogState.Mood = state.mood(now: now)
+        let tint: Color = WatchdogCard.tint(mood)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: WatchdogCard.icon(mood))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(tint)
+                    .frame(width: 34, height: 34)
+                    .background(tint.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Watchdog").font(.system(size: 15, weight: .semibold)).foregroundColor(Theme.text)
+                    Text(state.detail(now: now))
+                        .font(.system(size: 12.5)).foregroundColor(Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            if state.needsInstall && !state.install.isEmpty { installHint }
+            HStack(spacing: 10) {
+                if mood == .paused {
+                    Button {
+                        Task { await store.pauseWatchdog(minutes: 0) }
+                    } label: {
+                        pill("Fortsetzen", icon: "play.fill", tint: Theme.good)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityIdentifier("watchdogResume")
+                    Menu {
+                        choices(extend: true, now: now)
+                    } label: {
+                        pill("Verlängern", icon: "plus", tint: Theme.accent)
+                    }
+                } else {
+                    Menu {
+                        choices(extend: false, now: now)
+                    } label: {
+                        pill("Pausieren", icon: "pause.fill", tint: Theme.warn)
+                    }
+                    .accessibilityIdentifier("watchdogPause")
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// 30 min … 8 h; extending adds to what is left (12 h at most, the server's cap)
+    @ViewBuilder
+    private func choices(extend: Bool, now: Date) -> some View {
+        let left: Int = extend ? max(0, Int((state.pauseUntil ?? now).timeIntervalSince(now) / 60)) : 0
+        ForEach(WatchdogState.choices.indices, id: \.self) { i in
+            let title: String = WatchdogState.choices[i].0
+            let minutes: Int = WatchdogState.choices[i].1
+            Button(extend ? "+ " + title : title) {
+                Task { await store.pauseWatchdog(minutes: min(720, left + minutes)) }
+            }
+        }
+    }
+
+    private func pill(_ title: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: icon).font(.system(size: 12, weight: .bold))
+            Text(title)
+        }
+            .font(.system(size: 13.5, weight: .semibold))
+            .foregroundColor(tint)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(tint.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    /// An old copy on the phone cannot read the pause: one command in Termux
+    /// (the server names it - the address is not in this public repo).
+    private var installHint: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Auf dem Handy läuft noch die alte Version – die kennt die Pause nicht. Einmal in Termux einfügen, danach aktualisiert er sich selbst:")
+                .font(.system(size: 12.5)).foregroundColor(Theme.warn)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                UIPasteboard.general.string = state.install
+                Haptics.success()
+                store.say("Befehl kopiert – in Termux einfügen")
+            } label: {
+                HStack(spacing: 8) {
+                    Text(state.install)
+                        .font(.system(size: 12, design: .monospaced)).foregroundColor(Theme.text)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                    Image(systemName: "doc.on.doc").font(.system(size: 13, weight: .semibold)).foregroundColor(Theme.accent)
+                }
+                .padding(10)
+                .background(Color.black.opacity(0.25))
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+
+    static func icon(_ mood: WatchdogState.Mood) -> String {
+        switch mood {
+        case .running: return "checkmark.shield.fill"
+        case .paused: return "pause.circle.fill"
+        case .quiet: return "exclamationmark.triangle.fill"
+        case .unknown: return "questionmark.circle"
+        }
+    }
+
+    static func tint(_ mood: WatchdogState.Mood) -> Color {
+        switch mood {
+        case .running: return Theme.good
+        case .paused: return Theme.warn
+        case .quiet: return Theme.bad
+        case .unknown: return Theme.muted
+        }
     }
 }
 
