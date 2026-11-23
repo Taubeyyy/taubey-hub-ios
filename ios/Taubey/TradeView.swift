@@ -332,6 +332,7 @@ struct TradeSessionView: View {
     @Binding var live: TradeLive?
     let game: String
     let send: (String, [String: JSONValue]) -> Void
+    @EnvironmentObject var store: HubStore
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
     @State private var filter: TradeLogic.Filter = .all
@@ -380,6 +381,14 @@ struct TradeSessionView: View {
                     .font(.system(size: 17, weight: .semibold)).foregroundColor(Theme.text)
                 Text(live.status).font(.system(size: 13)).foregroundColor(live.selfAccepted && live.otherAccepted ? Theme.good : Theme.muted)
                     .fixedSize(horizontal: false, vertical: true)
+                if !live.gameSays.isEmpty {
+                    // what the game itself said - a refusal shows up here
+                    Label(live.gameSays, systemImage: "gamecontroller.fill")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(Theme.warn)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
+                }
             }
             Spacer(minLength: 0)
             if let c = live.countdown, live.selfAccepted && live.otherAccepted {
@@ -493,7 +502,11 @@ struct TradeSessionView: View {
     private func itemTile(_ item: TradeItem, offered: Int) -> some View {
         let free = max(0, item.count - offered)
         return Button {
-            guard !item.locked else { Haptics.failure(); return }
+            guard !item.locked else {
+                Haptics.failure()
+                store.say("\(item.name) ist gesperrt – erst im Inventar entsperren")
+                return
+            }
             let n = TradeLogic.amount(step: step, free: free)
             guard n > 0 else { Haptics.failure(); return }
             send("trade.offer", ["gk": .string(item.gk), "n": .number(Double(n))])
@@ -511,6 +524,10 @@ struct TradeSessionView: View {
                     if item.locked {
                         Image(systemName: "lock.fill").font(.system(size: 11, weight: .bold)).foregroundColor(.white)
                             .padding(4).background(Color.black.opacity(0.6)).clipShape(Circle()).offset(x: 5, y: -4)
+                    } else if item.placed && offered == 0 {
+                        // on a stand: it can go all the same, the game takes it off
+                        Image(systemName: "square.grid.3x3.fill").font(.system(size: 9, weight: .bold)).foregroundColor(.white)
+                            .padding(4).background(Theme.accentFill).clipShape(Circle()).offset(x: 5, y: -4)
                     }
                 }
                 Text(item.name).font(.system(size: 12, weight: .semibold)).foregroundColor(Theme.text).lineLimit(1)
@@ -525,7 +542,7 @@ struct TradeSessionView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(offered > 0 ? AnyShapeStyle(Theme.accentFill) : AnyShapeStyle(Theme.line), lineWidth: offered > 0 ? 1.5 : 1)
             )
-            .opacity(item.locked || item.placed ? 0.5 : 1)
+            .opacity(item.locked ? 0.55 : 1)
         }
         .buttonStyle(PressStyle(scale: 0.95))
     }
@@ -536,7 +553,7 @@ struct TradeSessionView: View {
         if item.isCharacter { bits.append("L\(item.level)") }
         if item.isMaterial { bits.append("Material") }
         if !item.isCharacter && !item.isMaterial { bits.append("Trank") }
-        if item.placed { bits.append("steht") }
+        if item.placed { bits.append("auf Stand") }
         return bits.joined(separator: " · ")
     }
 

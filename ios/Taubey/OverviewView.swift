@@ -48,10 +48,9 @@ struct OverviewView: View {
             .screenBackground()
             .navigationTitle(store.who.isEmpty ? "Übersicht" : "Hi, \(store.who)")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button { showEvents = true } label: { Image(systemName: "bell") }
-                        .accessibilityIdentifier("openEvents")
-                }
+                // no bell up here: next to the live chip, which changes every
+                // few seconds, the bar redrew it each time and it kept playing
+                // its fade (Edwin, 2026-11-23) - "Alle Events" sits in the card
                 ToolbarItem(placement: .navigationBarTrailing) {
                     LiveChip(online: (store.overview?.online ?? 0) > 0, at: store.lastUpdate)
                 }
@@ -312,7 +311,7 @@ struct OverviewView: View {
                 }
                 Button {
                     Haptics.tap()
-                    Notifier.shared.openTab = 3
+                    showEvents = true
                 } label: {
                     HStack(spacing: 5) {
                         Text("Alle Events")
@@ -323,6 +322,7 @@ struct OverviewView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PressStyle())
+                .accessibilityIdentifier("openEvents")
             }
         }
     }

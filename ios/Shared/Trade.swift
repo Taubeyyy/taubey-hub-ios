@@ -126,6 +126,8 @@ struct TradeLive: Equatable {
     var otherFee: Double
     var countdown: Int?
     var why: String
+    /// what the game itself just said in the trade (a refusal above all)
+    var gameSays: String
     var request: TradeRequest?
     var players: [TradePlayer]
     var trusted: [TradePlayer]
@@ -146,6 +148,7 @@ struct TradeLive: Equatable {
         otherFee = j["otherFee"].double ?? 0
         countdown = j["countdown"].int
         why = j["why"].string ?? ""
+        gameSays = j["gameSays"].string ?? ""
         if let name = j["request"]["name"].string, !name.isEmpty {
             request = TradeRequest(id: j["request"]["id"].int ?? 0, name: name, trusted: j["request"]["trusted"].bool ?? false,
                                    expires: now.addingTimeInterval(Double(j["request"]["left"].int ?? 20)))
