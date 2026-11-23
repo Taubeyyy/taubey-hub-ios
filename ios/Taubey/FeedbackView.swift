@@ -50,6 +50,7 @@ struct FeedbackView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .screenBackground()
+        .barRoom()
         .navigationTitle("Feedback an Claude")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { focused = true }

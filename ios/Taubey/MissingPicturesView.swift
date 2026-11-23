@@ -43,6 +43,7 @@ struct MissingPicturesView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .screenBackground()
+        .barRoom()
         .navigationTitle("Fehlende Bilder")
         .refreshable { await load() }
         .task { await load() }

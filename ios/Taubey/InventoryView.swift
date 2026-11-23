@@ -48,6 +48,7 @@ struct InventoryView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .screenBackground()
+            .barRoom()
             .searchable(text: $search, prompt: "Charakter, Mutation oder Item")
             .refreshable { await load() }
             .navigationTitle("Inventar")

@@ -54,6 +54,7 @@ struct SettingsEditor: View {
             }
         }
         .screenBackground()
+        .barRoom()
         .navigationTitle(agentId == nil ? "Standard · \(game)" : "Einstellungen")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -424,6 +425,7 @@ struct MultiPicker: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .screenBackground()
+        .barRoom()
         .searchable(text: $search)
         .navigationTitle(item.label)
         .navigationBarTitleDisplayMode(.inline)

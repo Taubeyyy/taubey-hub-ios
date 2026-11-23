@@ -67,15 +67,15 @@ struct RootView: View {
         // (TabBar). Trade took the Events' place on 2026-11-23 - the events
         // open from "Alle Events" on the overview.
         //
-        // Each tab keeps room for the bar itself: an inset on the TabView does
-        // not reach the tabs (UIKit hosts each one), so the last rows - "Alle
-        // Events", "Abmelden" - sat under the bar and could not be tapped.
+        // Each scrolling screen keeps room for the bar itself (.barRoom()):
+        // without it the last rows - "Alle Events", "Abmelden" - sat under
+        // the bar and could not be tapped.
         TabView(selection: $tab) {
-            OverviewView().tag(0).toolbar(.hidden, for: .tabBar).modifier(BarRoom())
-            InstancesView().tag(1).toolbar(.hidden, for: .tabBar).modifier(BarRoom())
-            InventoryView().tag(2).toolbar(.hidden, for: .tabBar).modifier(BarRoom())
-            TradeView().tag(3).toolbar(.hidden, for: .tabBar).modifier(BarRoom())
-            AccountView().tag(4).toolbar(.hidden, for: .tabBar).modifier(BarRoom())
+            OverviewView().tag(0).toolbar(.hidden, for: .tabBar)
+            InstancesView().tag(1).toolbar(.hidden, for: .tabBar)
+            InventoryView().tag(2).toolbar(.hidden, for: .tabBar)
+            TradeView().tag(3).toolbar(.hidden, for: .tabBar)
+            AccountView().tag(4).toolbar(.hidden, for: .tabBar)
         }
         .overlay(alignment: .bottom) {
             TabBar(selection: $tab, items: [

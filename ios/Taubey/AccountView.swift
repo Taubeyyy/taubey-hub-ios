@@ -121,6 +121,7 @@ struct AccountView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .screenBackground()
+            .barRoom()
             .navigationTitle("Konto")
             .confirmationDialog("Abmelden? Danach brauchst du einen neuen Code vom Dashboard.", isPresented: $confirmLogout,
                                 titleVisibility: .visible) {

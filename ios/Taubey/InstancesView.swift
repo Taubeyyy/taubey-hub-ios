@@ -83,6 +83,7 @@ struct InstancesView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .screenBackground()
+            .barRoom()
             .refreshable { await store.refresh() }
             .navigationTitle("Instanzen")
             .navigationDestination(for: Agent.self) { agent in
@@ -318,6 +319,7 @@ struct InstanceDetailView: View {
             .padding(16)
         }
         .screenBackground()
+        .barRoom()
         .navigationTitle(agent.account)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable {

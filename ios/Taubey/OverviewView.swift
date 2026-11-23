@@ -46,6 +46,7 @@ struct OverviewView: View {
                 await loadHistory()
             }
             .screenBackground()
+            .barRoom()
             .navigationTitle(store.who.isEmpty ? "Übersicht" : "Hi, \(store.who)")
             .toolbar {
                 // no bell up here: next to the live chip, which changes every

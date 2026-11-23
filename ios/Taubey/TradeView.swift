@@ -52,6 +52,7 @@ struct TradeView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .screenBackground()
+            .barRoom()
             .navigationTitle("Trade")
             .refreshable { await command("trade.refresh", quiet: true) }
             .task(id: agent?.id ?? "") { await follow() }
