@@ -4,6 +4,18 @@ import SwiftUI
 /// könnte cleaner sein"): one floating glass capsule, the tab you are on in a
 /// magenta pill that slides over, its symbol filled. The system's bar is
 /// hidden on every tab; content scrolls under this one.
+/// The room each tab keeps free at the bottom for the floating bar, so its
+/// last rows scroll above it instead of ending under it.
+struct BarRoom: ViewModifier {
+    static let height: CGFloat = 76
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: BarRoom.height).allowsHitTesting(false)
+        }
+    }
+}
+
 struct TabBar: View {
     @Binding var selection: Int
     let items: [Item]
