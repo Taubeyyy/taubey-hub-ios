@@ -4,6 +4,25 @@ import SwiftUI
 /// könnte cleaner sein"): one floating glass capsule, the tab you are on in a
 /// magenta pill that slides over, its symbol filled. The system's bar is
 /// hidden on every tab; content scrolls under this one.
+/// The room every screen under the bar keeps free at its bottom, so its last
+/// rows scroll above the bar instead of ending under it. It has to sit on the
+/// scrolling list itself: an inset on the TabView or around a NavigationStack
+/// never reaches it (UIKit hosts both) - tried both on 2026-11-23.
+struct BarRoom: ViewModifier {
+    static let height: CGFloat = 76
+
+    func body(content: Content) -> some View {
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear.frame(height: BarRoom.height).allowsHitTesting(false)
+        }
+    }
+}
+
+extension View {
+    /// Room for the floating bar - on each scrolling screen inside a tab.
+    func barRoom() -> some View { modifier(BarRoom()) }
+}
+
 struct TabBar: View {
     @Binding var selection: Int
     let items: [Item]

@@ -309,6 +309,7 @@ check(tradeDemo.players.count == 3 && tradeDemo.players.first { $0.name == "Myst
 check(tradeDemo.trusted.map { $0.name } == ["Taubey"] && tradeDemo.settings.onlyReceive && !tradeDemo.settings.window, "trade: trusted and settings")
 check(tradeDemo.items?.count == 9 && tradeDemo.items?.first { $0.gk == "C|Miki||L314" }?.locked == true, "trade: items with lock")
 check(tradeDemo.offered["C|Orihira||L315"] == 1, "trade: what is in already")
+check(tradeDemo.items?.first { $0.gk == "C|Orihira||L315" }?.placed == true && tradeDemo.gameSays == "Taubey accepted the trade!", "trade: on a stand, the game's word")
 check(tradeDemo.status == "Taubey hat angenommen – jetzt du", "trade: status got \(tradeDemo.status)")
 let tradeChars = TradeLogic.shown(tradeDemo.items ?? [], filter: .characters, search: "")
 check(tradeChars.count == 6 && tradeChars.first?.name == "Kafkia", "trade: characters best first got \(tradeChars.first?.name ?? "-")")

@@ -39,6 +39,7 @@ struct PlotView: View {
             .padding(16)
         }
         .screenBackground()
+        .barRoom()
         .navigationTitle("Stände & Jobs")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await reload() }

@@ -48,6 +48,7 @@ struct InventoryView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .screenBackground()
+            .barRoom()
             .searchable(text: $search, prompt: "Charakter, Mutation oder Item")
             .refreshable { await load() }
             .navigationTitle("Inventar")
@@ -261,11 +262,6 @@ struct InventoryView: View {
 /// One kind of character: picture, name, rarity and mutation, how many, and
 /// what it earns - or, when given, a note in its place (when it showed up).
 struct ItemRow: View {
-    private var pictureURL: URL? {
-        guard let url = HubAPI.imageURL(game: game, name: item.name) else { return nil }
-        return bust == 0 ? url : URL(string: url.absoluteString + "?v=\(bust)")
-    }
-
     let item: Item
     let game: String
     var bust: Int = 0
@@ -275,17 +271,9 @@ struct ItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: pictureURL) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    Image(systemName: "person.fill").foregroundColor(Theme.faint)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .background(Theme.raised)
-            .clipShape(RoundedRectangle(cornerRadius: 11))
-            .overlay(RoundedRectangle(cornerRadius: 11).stroke(Theme.color(rarity: item.rarity).opacity(0.65), lineWidth: 1.5))
+            // the same picture as everywhere else: the rarity's frame, its
+            // initials while it loads or when there is none yet
+            Portrait(name: item.name, game: game, rarity: item.rarity, size: 44, radius: 11, bust: bust)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 5) {

@@ -44,17 +44,20 @@ final class TaubeyUITests: XCTestCase {
             if all.exists { all.tap() }
         }
 
-        // the events, from the bell on the overview (their tab went to Trade);
-        // a pull down at the top of the sheet closes it again
-        let bell = app.buttons["openEvents"].firstMatch
-        if bell.waitForExistence(timeout: 3) {
-            bell.tap()
+        // the events, from "Alle Events" at the foot of the overview (their tab
+        // went to Trade); "Fertig" closes the sheet again
+        app.swipeUp(); app.swipeUp(); app.swipeUp()
+        sleep(1)
+        let allEvents = app.buttons["openEvents"].firstMatch
+        if allEvents.waitForExistence(timeout: 3) {
+            allEvents.tap()
             sleep(2)
             shot("04a-events")
             let done = app.buttons["closeEvents"].firstMatch
             if done.waitForExistence(timeout: 3) { done.tap() }
             sleep(1)
         }
+        app.swipeDown(); app.swipeDown(); app.swipeDown()
 
         tab("Instanzen")
         sleep(1)

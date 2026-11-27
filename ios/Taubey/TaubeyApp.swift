@@ -65,7 +65,11 @@ struct RootView: View {
     var body: some View {
         // The system's bar is hidden on every tab; ours floats at the bottom
         // (TabBar). Trade took the Events' place on 2026-11-23 - the events
-        // open from the bell on the overview.
+        // open from "Alle Events" on the overview.
+        //
+        // Each scrolling screen keeps room for the bar itself (.barRoom()):
+        // without it the last rows - "Alle Events", "Abmelden" - sat under
+        // the bar and could not be tapped.
         TabView(selection: $tab) {
             OverviewView().tag(0).toolbar(.hidden, for: .tabBar)
             InstancesView().tag(1).toolbar(.hidden, for: .tabBar)
@@ -73,7 +77,7 @@ struct RootView: View {
             TradeView().tag(3).toolbar(.hidden, for: .tabBar)
             AccountView().tag(4).toolbar(.hidden, for: .tabBar)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             TabBar(selection: $tab, items: [
                 .init(tag: 0, title: "Übersicht", icon: "square.grid.2x2"),
                 .init(tag: 1, title: "Instanzen", icon: "desktopcomputer"),
@@ -81,14 +85,22 @@ struct RootView: View {
                 .init(tag: 3, title: "Trade", icon: "arrow.left.arrow.right"),
                 .init(tag: 4, title: "Konto", icon: "person.crop.circle"),
             ])
-            // what scrolls under the bar fades into the dark down to the edge,
-            // instead of showing through beneath it
-            .background(alignment: .bottom) {
-                LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.92)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 120)
-                    .ignoresSafeArea(edges: .bottom)
-                    .allowsHitTesting(false)
+            // what scrolls under the bar fades into the dark, down to the very
+            // edge: the fade starts a little above the bar, and it reaches into
+            // the home indicator's strip (the bar's own frame touches that edge,
+            // so ignoresSafeArea can take it the rest of the way)
+            .padding(.top, 22)
+            .background {
+                LinearGradient(stops: [
+                    .init(color: Theme.ink.opacity(0), location: 0),
+                    .init(color: Theme.ink.opacity(0.78), location: 0.42),
+                    .init(color: Theme.ink.opacity(0.97), location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
+                .allowsHitTesting(false)
             }
+            // the keyboard comes up over the bar, it does not push it up
+            .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         // a tapped notification lands on the tab it is about
         .onChange(of: notifier.openTab) { wanted in
